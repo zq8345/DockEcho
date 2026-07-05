@@ -2,37 +2,28 @@ const STORAGE_KEY = "dockecho.local.state.v1";
 const LEGACY_STORAGE_KEYS = ["docktodo.local.state.v1", "docknote.local.state.v1"];
 const todayKey = formatDate(new Date());
 
-const seedNotes = [
-  {
-    title: "为什么 DockEcho 是本地知识网络",
-    body: "Notion 更适合团队，但对个人来说经常太重。Obsidian 的理念很好：本地、长期、双向链接、知识网络。但小白打开后容易不知道第一步做什么。\n\nDockEcho 要做的是：打开就能写，写完以后系统自动帮你发现相关笔记和主题。\n\n#产品 #知识管理 #本地优先",
-    pinned: true,
-  },
-  {
-    title: "本地优先的价值",
-    body: "本地优先不是复古，而是信任。用户知道自己的笔记属于自己，不会因为平台策略、订阅、网络问题而失去长期积累。\n\n真正的长期知识库要能导出、能迁移、能被普通文件系统理解。\n\n关联：[[为什么 DockEcho 是本地知识网络]]\n\n#隐私 #本地优先 #长期主义",
-    pinned: true,
-  },
-  {
-    title: "给小白的知识网络应该长什么样",
-    body: "不要一上来讲 Zettelkasten、MOC、PARA、双链语法。用户只需要知道三件事：\n\n1. 直接写。\n2. 用 #标签 表示主题。\n3. 系统会自动告诉你哪些旧笔记相关。\n\n图谱应该是结果，不应该是入口。\n\n#小白友好 #产品 #知识网络",
-  },
-  {
-    title: `每日笔记 ${todayKey}`,
-    body: "今天的想法：DockEcho 应该像 Apple Notes 一样容易开始，但像 Obsidian 一样能长期积累。\n\n我需要验证：用户是否真的需要“自动关联旧笔记”，还是只需要更好的搜索。\n\n#每日笔记 #验证",
-    daily: true,
-  },
-];
+function buildSeedNotes() {
+  const seeds = SEED_NOTES[currentLang()] ?? SEED_NOTES.en;
+  return seeds.map((seed, index) => createNote({
+    title: seed.titleKey ? t(seed.titleKey, { date: todayKey }) : seed.title,
+    body: seed.body,
+    pinned: seed.pinned,
+    daily: seed.daily,
+  }, index));
+}
 
-const defaultState = {
-  view: "write",
-  filter: "all",
-  query: "",
-  activeTag: "",
-  selectedId: "",
-  theme: "light",
-  notes: seedNotes.map((note, index) => createNote(note, index)),
-};
+function buildDefaultState() {
+  return {
+    view: "write",
+    filter: "all",
+    query: "",
+    activeTag: "",
+    selectedId: "",
+    theme: "light",
+    lang: currentLang(),
+    notes: buildSeedNotes(),
+  };
+}
 
 const els = {
   body: document.body,
@@ -69,15 +60,18 @@ const els = {
   clusterBoard: document.querySelector("#clusterBoard"),
   strongConnections: document.querySelector("#strongConnections"),
   orphanNotes: document.querySelector("#orphanNotes"),
+  langToggle: document.querySelector("#langToggle"),
   memoryCard: document.querySelector("#memoryCard"),
   themeReview: document.querySelector("#themeReview"),
   connectionReview: document.querySelector("#connectionReview"),
 };
 
-let state = normalizeState(loadState());
+const savedState = loadRawState();
+setI18nLang(savedState?.lang ?? detectLang());
+let state = normalizeState(savedState ?? buildDefaultState());
 let saveTimer = null;
 
-function loadState() {
+function loadRawState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.notes?.length) return saved;
@@ -89,9 +83,9 @@ function loadState() {
       }
     }
   } catch {
-    return structuredClone(defaultState);
+    return null;
   }
-  return structuredClone(defaultState);
+  return null;
 }
 
 function normalizeState(nextState) {
@@ -100,9 +94,10 @@ function normalizeState(nextState) {
   nextState.query ??= "";
   nextState.activeTag ??= "";
   nextState.theme ??= "light";
+  nextState.lang = I18N[nextState.lang] ? nextState.lang : currentLang();
   nextState.notes = (nextState.notes ?? []).map((note) => ({
     id: note.id ?? createId(),
-    title: note.title || "未命名笔记",
+    title: note.title || t("untitled"),
     body: note.body ?? "",
     pinned: Boolean(note.pinned),
     daily: Boolean(note.daily),
@@ -133,7 +128,7 @@ function createNote(input = {}, index = 0) {
   const now = Date.now() - index * 86400000;
   return {
     id: createId(),
-    title: input.title || "未命名笔记",
+    title: input.title || t("untitled"),
     body: input.body || "",
     pinned: Boolean(input.pinned),
     daily: Boolean(input.daily),
@@ -159,7 +154,7 @@ function allTags(note = null) {
   notes.forEach((item) => {
     extractTags(item.body).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
   });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN"));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], t("dateLocale")));
 }
 
 function extractTags(text) {
@@ -241,7 +236,7 @@ function selectNote(id) {
 
 function addNote(input = {}) {
   const note = createNote({
-    title: input.title ?? "新的想法",
+    title: input.title ?? t("newIdea"),
     body: input.body ?? "",
     daily: Boolean(input.daily),
     pinned: Boolean(input.pinned),
@@ -255,17 +250,26 @@ function addNote(input = {}) {
 }
 
 function getOrCreateDailyNote() {
-  const title = `每日笔记 ${todayKey}`;
-  const existing = state.notes.find((note) => note.title === title);
+  const existing = state.notes.find((note) => note.daily && note.title.includes(todayKey));
   if (existing) {
     selectNote(existing.id);
     return;
   }
   addNote({
-    title,
+    title: t("dailyTitle", { date: todayKey }),
     daily: true,
-    body: `今天我在想：\n\n\n#每日笔记`,
+    body: t("dailyBody"),
   });
+}
+
+function deleteNote(id) {
+  const note = state.notes.find((item) => item.id === id);
+  if (!note) return;
+  if (!confirm(t("deleteConfirm", { title: note.title }))) return;
+  state.notes = state.notes.filter((item) => item.id !== id);
+  if (state.selectedId === id) state.selectedId = filteredNotes()[0]?.id ?? state.notes[0]?.id ?? "";
+  saveState();
+  render();
 }
 
 function updateSelected(patch) {
@@ -277,6 +281,8 @@ function updateSelected(patch) {
 }
 
 function render(syncEditor = true) {
+  setI18nLang(state.lang);
+  applyI18n();
   renderTheme();
   renderShell();
   renderSidebar();
@@ -291,15 +297,15 @@ function renderTheme() {
 function renderShell() {
   els.railButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === state.view));
   const titles = {
-    write: "写作",
-    library: "笔记库",
-    network: "知识网络",
-    review: "知识回流",
+    write: t("viewWrite"),
+    library: t("viewLibrary"),
+    network: t("viewNetwork"),
+    review: t("viewReview"),
   };
   els.viewTitle.textContent = titles[state.view];
   const total = state.notes.length;
   const links = state.notes.reduce((sum, note) => sum + extractLinks(note.body).length, 0);
-  els.viewMeta.textContent = `${total} 条本地笔记 · ${allTags().length} 个主题 · ${links} 条显式连接`;
+  els.viewMeta.textContent = t("viewMeta", { total, tags: allTags().length, links });
   els.writeView.classList.toggle("hidden", state.view !== "write");
   els.libraryView.classList.toggle("hidden", state.view !== "library");
   els.networkView.classList.toggle("hidden", state.view !== "network");
@@ -343,7 +349,7 @@ function noteButton(note) {
   button.innerHTML = `
     <strong>${escapeHtml(note.title)}</strong>
     <span>${escapeHtml(snippet(note.body, 72))}</span>
-    <small>${note.pinned ? "★ " : ""}${tags || "未标记"} · ${timeAgo(note.updatedAt)}</small>
+    <small>${note.pinned ? "★ " : ""}${tags || t("untagged")} · ${timeAgo(note.updatedAt)}</small>
   `;
   button.addEventListener("click", () => selectNote(note.id));
   return button;
@@ -372,12 +378,14 @@ function renderMeta(note) {
   }
   const tags = extractTags(note.body);
   els.noteMeta.innerHTML = `
-    <button class="meta-chip" type="button" id="pinToggle">${note.pinned ? "已置顶" : "置顶"}</button>
-    <span>${note.body.length} 字符</span>
-    <span>${tags.length ? tags.map((tag) => `#${tag}`).join(" ") : "没有标签"}</span>
-    <span>${new Date(note.updatedAt).toLocaleString("zh-CN")}</span>
+    <button class="meta-chip" type="button" id="pinToggle">${note.pinned ? t("pinned") : t("pin")}</button>
+    <button class="meta-chip danger" type="button" id="deleteNote">${t("delete")}</button>
+    <span>${t("chars", { count: note.body.length })}</span>
+    <span>${tags.length ? tags.map((tag) => `#${tag}`).join(" ") : t("noTags")}</span>
+    <span>${new Date(note.updatedAt).toLocaleString(t("dateLocale"))}</span>
   `;
   document.querySelector("#pinToggle")?.addEventListener("click", () => updateSelected({ pinned: !note.pinned }));
+  document.querySelector("#deleteNote")?.addEventListener("click", () => deleteNote(note.id));
 }
 
 function renderLibrary() {
@@ -389,7 +397,7 @@ function renderLibrary() {
     card.innerHTML = `
       <strong>${escapeHtml(note.title)}</strong>
       <p>${escapeHtml(snippet(note.body, 150))}</p>
-      <span>${extractTags(note.body).map((tag) => `#${tag}`).join(" ") || "未标记"}</span>
+      <span>${extractTags(note.body).map((tag) => `#${tag}`).join(" ") || t("untagged")}</span>
     `;
     card.addEventListener("click", () => selectNote(note.id));
     els.libraryGrid.append(card);
@@ -398,8 +406,8 @@ function renderLibrary() {
 
 function renderInsights() {
   const note = selectedNote();
-  renderMiniList(els.relatedList, relatedNotes(note), "还没有发现明显相关的笔记。继续写，系统会自动识别。");
-  renderPlainNotes(els.backlinkList, backlinks(note), "暂无反向链接。");
+  renderMiniList(els.relatedList, relatedNotes(note), t("emptyRelated"));
+  renderPlainNotes(els.backlinkList, backlinks(note), t("emptyBacklinks"));
   renderSuggestions(note);
 }
 
@@ -430,14 +438,14 @@ function renderSuggestions(note) {
   const explicit = new Set(extractLinks(note.body));
   const suggestions = relatedNotes(note, 4).filter((item) => !explicit.has(item.note.title));
   if (!suggestions.length) {
-    els.suggestionList.innerHTML = `<div class="empty-mini">没有新的连接建议。</div>`;
+    els.suggestionList.innerHTML = `<div class="empty-mini">${t("emptySuggestions")}</div>`;
     return;
   }
   suggestions.forEach((item) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "suggestion";
-    button.innerHTML = `<strong>连接到《${escapeHtml(item.note.title)}》</strong><span>相关度 ${item.score}</span>`;
+    button.innerHTML = `<strong>${t("linkTo", { title: escapeHtml(item.note.title) })}</strong><span>${t("relevance", { score: item.score })}</span>`;
     button.addEventListener("click", () => insertTextAtCursor(`[[${item.note.title}]]`));
     els.suggestionList.append(button);
   });
@@ -447,7 +455,7 @@ function renderNetwork() {
   const clusters = allTags();
   els.clusterBoard.replaceChildren();
   if (!clusters.length) {
-    els.clusterBoard.innerHTML = `<div class="empty-mini">还没有主题。写下 #标签 后这里会自动形成主题簇。</div>`;
+    els.clusterBoard.innerHTML = `<div class="empty-mini">${t("emptyClusters")}</div>`;
   }
   clusters.forEach(([tag, count]) => {
     const notes = state.notes.filter((note) => extractTags(note.body).includes(tag));
@@ -455,7 +463,7 @@ function renderNetwork() {
     card.className = "cluster-card";
     card.innerHTML = `
       <strong>#${escapeHtml(tag)}</strong>
-      <span>${count} 条笔记</span>
+      <span>${t("noteCount", { n: count })}</span>
       <p>${notes.slice(0, 3).map((note) => note.title).join(" · ")}</p>
     `;
     card.addEventListener("click", () => {
@@ -482,18 +490,18 @@ function renderNetwork() {
     row.addEventListener("click", () => selectNote(item.note.id));
     els.strongConnections.append(row);
   });
-  if (!connections.length) els.strongConnections.innerHTML = `<div class="empty-mini">继续写，连接会自然出现。</div>`;
+  if (!connections.length) els.strongConnections.innerHTML = `<div class="empty-mini">${t("emptyConnections")}</div>`;
 
   els.orphanNotes.replaceChildren();
   unlinkedNotes().forEach((note) => {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "connection-row";
-    row.innerHTML = `<strong>${escapeHtml(note.title)}</strong><span>还没有链接或反链</span>`;
+    row.innerHTML = `<strong>${escapeHtml(note.title)}</strong><span>${t("orphanHint")}</span>`;
     row.addEventListener("click", () => selectNote(note.id));
     els.orphanNotes.append(row);
   });
-  if (!unlinkedNotes().length) els.orphanNotes.innerHTML = `<div class="empty-mini">所有笔记都已经进入网络。</div>`;
+  if (!unlinkedNotes().length) els.orphanNotes.innerHTML = `<div class="empty-mini">${t("noOrphans")}</div>`;
 }
 
 function renderReview() {
@@ -502,10 +510,10 @@ function renderReview() {
     .sort((a, b) => a.updatedAt - b.updatedAt)[0];
   if (resurfaced) {
     els.memoryCard.innerHTML = `
-      <span>知识回流</span>
-      <strong>重新看看《${escapeHtml(resurfaced.title)}》</strong>
+      <span>${t("memoryTag")}</span>
+      <strong>${t("memoryTitle", { title: escapeHtml(resurfaced.title) })}</strong>
       <p>${escapeHtml(snippet(resurfaced.body, 180))}</p>
-      <button class="primary-btn" type="button" id="openMemory">打开这条笔记</button>
+      <button class="primary-btn" type="button" id="openMemory">${t("memoryOpen")}</button>
     `;
     document.querySelector("#openMemory")?.addEventListener("click", () => selectNote(resurfaced.id));
   }
@@ -514,10 +522,10 @@ function renderReview() {
   allTags().slice(0, 5).forEach(([tag, count]) => {
     const row = document.createElement("div");
     row.className = "theme-row";
-    row.innerHTML = `<strong>#${escapeHtml(tag)}</strong><span>${count} 次出现</span>`;
+    row.innerHTML = `<strong>#${escapeHtml(tag)}</strong><span>${t("tagSeen", { n: count })}</span>`;
     els.themeReview.append(row);
   });
-  if (!allTags().length) els.themeReview.innerHTML = `<div class="empty-mini">还没有反复出现的主题。</div>`;
+  if (!allTags().length) els.themeReview.innerHTML = `<div class="empty-mini">${t("emptyThemes")}</div>`;
 
   els.connectionReview.replaceChildren();
   const note = selectedNote();
@@ -525,11 +533,11 @@ function renderReview() {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "connection-row";
-    row.innerHTML = `<strong>${escapeHtml(note.title)} ↔ ${escapeHtml(item.note.title)}</strong><span>可以在当前笔记加入 [[${escapeHtml(item.note.title)}]]</span>`;
+    row.innerHTML = `<strong>${escapeHtml(note.title)} ↔ ${escapeHtml(item.note.title)}</strong><span>${t("reviewAdd", { title: escapeHtml(item.note.title) })}</span>`;
     row.addEventListener("click", () => insertTextAtCursor(`[[${item.note.title}]]`));
     els.connectionReview.append(row);
   });
-  if (!relatedNotes(note, 5).length) els.connectionReview.innerHTML = `<div class="empty-mini">暂时没有连接建议。</div>`;
+  if (!relatedNotes(note, 5).length) els.connectionReview.innerHTML = `<div class="empty-mini">${t("emptyReviewLinks")}</div>`;
 }
 
 function smartOrganizeNote() {
@@ -540,8 +548,8 @@ function smartOrganizeNote() {
   const related = relatedNotes(note, 2).map((item) => item.note.title);
   const additions = [];
   if (inferred.length) additions.push(`\n\n${inferred.map((tag) => `#${tag}`).join(" ")}`);
-  if (related.length && !extractLinks(note.body).length) additions.push(`\n\n相关想法：${related.map((title) => `[[${title}]]`).join(" ")}`);
-  if (!additions.length) additions.push("\n\n整理提示：这条笔记已经有标签和连接，可以继续补充例子或结论。");
+  if (related.length && !extractLinks(note.body).length) additions.push(`\n\n${t("organizeRelated")}${related.map((title) => `[[${title}]]`).join(" ")}`);
+  if (!additions.length) additions.push(`\n\n${t("organizeDone")}`);
   note.body = `${note.body.trim()}${additions.join("")}`;
   note.updatedAt = Date.now();
   saveState();
@@ -550,13 +558,7 @@ function smartOrganizeNote() {
 
 function inferTags(note) {
   const text = `${note.title} ${note.body}`;
-  const rules = [
-    ["产品", /产品|用户|体验|定位|定价|MVP/i],
-    ["知识管理", /知识|笔记|连接|主题|双链|图谱|Notion|Obsidian/i],
-    ["本地优先", /本地|隐私|导出|Markdown|文件/i],
-    ["写作", /写作|文章|素材|创作|表达/i],
-    ["验证", /验证|假设|实验|反馈|调研/i],
-  ];
+  const rules = INFER_RULES[currentLang()] ?? INFER_RULES.en;
   return rules.filter(([, pattern]) => pattern.test(text)).map(([tag]) => tag);
 }
 
@@ -595,8 +597,8 @@ function exportAllNotes() {
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map((note) => {
       const tags = extractTags(note.body).map((tag) => `#${tag}`).join(" ");
-      const updated = new Date(note.updatedAt).toLocaleString("zh-CN");
-      return `# ${note.title}\n\n> Updated: ${updated}${tags ? `\n> Tags: ${tags}` : ""}\n\n${note.body}\n`;
+      const updated = new Date(note.updatedAt).toLocaleString(t("dateLocale"));
+      return `# ${note.title}\n\n> ${t("exportUpdated")}: ${updated}${tags ? `\n> ${t("exportTags")}: ${tags}` : ""}\n\n${note.body}\n`;
     })
     .join("\n---\n\n");
   const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
@@ -612,17 +614,17 @@ function safeFileName(name) {
 }
 
 function snippet(text, length) {
-  return text.replace(/[#*_`\[\]]/g, "").replace(/\s+/g, " ").trim().slice(0, length) || "空白笔记";
+  return text.replace(/[#*_`\[\]]/g, "").replace(/\s+/g, " ").trim().slice(0, length) || t("emptyNote");
 }
 
 function timeAgo(timestamp) {
   const diff = Date.now() - timestamp;
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1) return t("justNow");
+  if (minutes < 60) return t("minutesAgo", { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  return `${Math.floor(hours / 24)} 天前`;
+  if (hours < 24) return t("hoursAgo", { n: hours });
+  return t("daysAgo", { n: Math.floor(hours / 24) });
 }
 
 function escapeHtml(value) {
@@ -666,12 +668,12 @@ els.clearSearch.addEventListener("click", () => {
 });
 els.newNote.addEventListener("click", () => addNote());
 els.dailyNote.addEventListener("click", getOrCreateDailyNote);
-els.noteTitle.addEventListener("input", () => updateSelected({ title: els.noteTitle.value.trim() || "未命名笔记" }));
+els.noteTitle.addEventListener("input", () => updateSelected({ title: els.noteTitle.value.trim() || t("untitled") }));
 els.noteBody.addEventListener("input", () => updateSelected({ body: els.noteBody.value }));
 els.insertLink.addEventListener("click", () => {
   const note = selectedNote();
   const target = relatedNotes(note, 1)[0]?.note ?? state.notes.find((item) => item.id !== note?.id);
-  insertTextAtCursor(target ? `[[${target.title}]]` : "[[新连接]]");
+  insertTextAtCursor(target ? `[[${target.title}]]` : `[[${t("newLinkFallback")}]]`);
 });
 els.smartOrganize.addEventListener("click", smartOrganizeNote);
 els.exportNote.addEventListener("click", exportSelectedNote);
@@ -681,6 +683,16 @@ els.themeToggle.addEventListener("click", () => {
   saveState();
   render();
 });
+els.langToggle.addEventListener("click", () => {
+  state.lang = state.lang === "zh" ? "en" : "zh";
+  saveState();
+  render();
+});
+
+function applyI18n() {
+  applyStaticI18n();
+  els.langToggle.textContent = t("switchTo");
+}
 
 installGlassInteractions();
 saveState();
