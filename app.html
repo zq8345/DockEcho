@@ -167,15 +167,14 @@
       <div class="importer-card">
         <button class="echo-close" type="button" id="importerClose" data-i18n-title="echoClose" title="关闭">✕</button>
         <h2 data-i18n="importTitle">带上你的旧笔记</h2>
-        <p class="importer-sub" data-i18n="importSub">Kindle 划线、Readwise 导出或一批 Markdown——全部在你的设备上解析，不上传任何内容。</p>
-        <div class="importer-actions">
-          <button class="soft-btn" id="importKindleBtn" type="button" data-i18n="importKindle">Kindle 划线（My Clippings.txt）</button>
-          <button class="soft-btn" id="importReadwiseBtn" type="button" data-i18n="importReadwise">Readwise 导出（CSV）</button>
-          <button class="soft-btn" id="importMdBtn" type="button" data-i18n="importMd">Markdown 文件（可多选）</button>
-        </div>
-        <input type="file" id="importKindleFile" accept=".txt,text/plain" class="hidden" />
-        <input type="file" id="importReadwiseFile" accept=".csv,text/csv" class="hidden" />
-        <input type="file" id="importMdFile" accept=".md,.markdown,.txt,text/markdown" multiple class="hidden" />
+        <p class="importer-sub" data-i18n="importSub">把文件拖进来，或点击选择——DockEcho 会自动识别格式。全部在你的设备上解析，不上传任何内容。</p>
+        <button class="import-drop" type="button" id="importDrop">
+          <span class="import-drop-icon" aria-hidden="true">⇪</span>
+          <strong data-i18n="importDrop">拖放文件到这里</strong>
+          <span class="import-drop-hint" data-i18n="importDropHint">支持 Notion、Evernote、Roam、Day One、Google Keep、Bear、Kindle、Readwise 与 Markdown</span>
+        </button>
+        <input type="file" id="importFile" multiple class="hidden"
+          accept=".zip,.enex,.json,.txt,.csv,.md,.markdown" />
         <p class="importer-msg hidden" id="importerMsg"></p>
         <div class="importer-echo hidden" id="importerEcho"></div>
       </div>
@@ -200,6 +199,7 @@
     <script src="./assets/echo.js"></script>
     <script src="./assets/vault.js"></script>
     <script src="./assets/import.js"></script>
+    <script src="./assets/migrate.js"></script>
     <script src="./assets/app.js"></script>
   </body>
 </html>

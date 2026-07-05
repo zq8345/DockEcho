@@ -169,11 +169,54 @@ function echoContextOverlap(termsA, termsB) {
   return hits / Math.min(termsA.length, termsB.length);
 }
 
+const ECHO_MIN_ONTHISDAY_CHARS = 40;
+
+// "N years ago today": the strongest emotional hook. A note created N years ago
+// (±1 day) on today's date, with substantial content, outranks the relevance
+// channel — but still respects the one-card-a-day and cooldown rules.
+function pickOnThisDay({ notes, meta, now }) {
+  const today = new Date(now);
+  const candidates = [];
+  notes.forEach((note) => {
+    if (!note.createdAt) return;
+    if ((meta.snoozed?.[note.id] ?? 0) > now) return;
+    const lastShown = meta.history?.[note.id] ?? 0;
+    if (now - lastShown < ECHO_REPEAT_COOLDOWN_DAYS * ECHO_DAY) return;
+    const body = String(note.body ?? "").replace(/\s+/g, "");
+    if (body.length < ECHO_MIN_ONTHISDAY_CHARS) return;
+    const created = new Date(note.createdAt);
+    const years = today.getFullYear() - created.getFullYear();
+    if (years < 1) return;
+    // Match calendar day within ±1 day (handles leap days and timezone drift).
+    const anniversary = new Date(created);
+    anniversary.setFullYear(today.getFullYear());
+    const dayGap = Math.abs((today - anniversary) / ECHO_DAY);
+    if (dayGap <= 1.0) candidates.push({ note, years });
+  });
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.years - a.years);
+  return candidates[0];
+}
+
 // meta shape: { lastDate, lastNoteId, closedDate, history: {noteId: lastShownTs},
 //               snoozed: {noteId: untilTs}, dismissed: {noteId: [ [terms...] ]} }
 function pickTodayEcho({ notes, index, meta, now, contextIds }) {
   if (notes.length < 2 || !contextIds.length) return null;
   index.sync(notes);
+
+  // On-this-day channel takes priority when it has something worthy.
+  const anniversary = pickOnThisDay({ notes, meta, now });
+  if (anniversary) {
+    return {
+      note: anniversary.note,
+      relevance: 1,
+      onThisDayYears: anniversary.years,
+      bestContextId: null,
+      sharedTerms: [],
+      contextTerms: [],
+    };
+  }
+
   const minAge = echoMinAgeDays(notes, now);
   const contextTerms = contextIds.flatMap((id) => index.topTerms(id, 6));
   const candidates = [];

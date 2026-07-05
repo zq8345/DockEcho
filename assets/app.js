@@ -90,6 +90,8 @@ const els = {
   importerClose: document.querySelector("#importerClose"),
   importerMsg: document.querySelector("#importerMsg"),
   importerEcho: document.querySelector("#importerEcho"),
+  importDrop: document.querySelector("#importDrop"),
+  importFile: document.querySelector("#importFile"),
   openVault: document.querySelector("#openVault"),
   vaultStatus: document.querySelector("#vaultStatus"),
   onboarding: document.querySelector("#onboarding"),
@@ -575,7 +577,9 @@ function currentEcho() {
     if (echo.closedDate === todayKey || !echo.lastNoteId) return null;
     const note = state.notes.find((item) => item.id === echo.lastNoteId);
     if (!note) return null;
-    const why = buildEchoWhy(note, echo.lastTerms ?? [], echo.lastContextId);
+    const why = echo.lastOnThisDay
+      ? t("echoOnThisDay", { n: echo.lastOnThisDay })
+      : buildEchoWhy(note, echo.lastTerms ?? [], echo.lastContextId);
     return why ? { note, why } : null;
   }
   echoIndex.sync(state.notes);
@@ -587,13 +591,16 @@ function currentEcho() {
     contextIds: echoContextIds(),
   });
   if (!pick) return null;
-  const why = buildEchoWhy(pick.note, pick.sharedTerms, pick.bestContextId);
+  const why = pick.onThisDayYears
+    ? t("echoOnThisDay", { n: pick.onThisDayYears })
+    : buildEchoWhy(pick.note, pick.sharedTerms, pick.bestContextId);
   if (!why) return null; // a card without a "why" never ships
   echo.lastDate = todayKey;
   echo.lastNoteId = pick.note.id;
   echo.lastTerms = pick.sharedTerms;
   echo.lastContextId = pick.bestContextId;
   echo.lastContextTerms = pick.contextTerms.slice(0, 12);
+  echo.lastOnThisDay = pick.onThisDayYears ?? 0;
   echo.closedDate = "";
   echo.history ??= {};
   echo.history[pick.note.id] = Date.now();
@@ -1122,13 +1129,19 @@ function importReportError(text) {
   els.importerMsg.classList.remove("hidden");
 }
 
-async function ingestImportedNotes(parsed, kindLabel) {
-  if (parsed === null) {
-    importReportError(t("importErrParse", { kind: kindLabel }));
-    return;
-  }
+// Ingest parsed notes. `result` = { notes, skipped, skippedKind } aggregated
+// across all dropped files. Timestamps carried straight through — never reset.
+async function ingestImportedNotes(result) {
+  const parsed = result.notes ?? [];
   const existingTitles = new Set(state.notes.map((note) => note.title));
-  const fresh = parsed.filter((item) => item.title && !existingTitles.has(item.title));
+  const seen = new Set();
+  const fresh = parsed.filter((item) => {
+    if (!item.title) return false;
+    const key = `${item.title} ${(item.body ?? "").length}`;
+    if (existingTitles.has(item.title) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   if (!fresh.length) {
     importReportError(t("importErrEmpty"));
     return;
@@ -1142,7 +1155,7 @@ async function ingestImportedNotes(parsed, kindLabel) {
       pinned: false,
       daily: false,
       createdAt: item.createdAt ?? Date.now(),
-      updatedAt: item.updatedAt ?? Date.now(),
+      updatedAt: item.updatedAt ?? item.createdAt ?? Date.now(),
       source: item.source ?? item.title,
     };
     if (runtime.mode === "vault") {
@@ -1166,7 +1179,14 @@ async function ingestImportedNotes(parsed, kindLabel) {
   state.notes.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
   saveState();
   render(false);
-  els.importerMsg.textContent = t("importDone", { n: imported.length });
+  const parts = [t("importDone", { n: imported.length })];
+  if (result.skipped > 0) {
+    const kind = result.skippedKind === "database CSV" ? t("kindNotion")
+      : result.skippedKind === "attachment" ? t("kindAttachment")
+      : result.skippedKind;
+    parts.push(t("importSkipped", { n: result.skipped, kind }));
+  }
+  els.importerMsg.textContent = parts.join(" · ");
   els.importerMsg.classList.remove("hidden", "error");
   showFirstEcho(imported);
 }
@@ -1237,20 +1257,36 @@ function showFirstEcho(imported) {
   }
 }
 
-function wireImportInput(buttonId, inputId, kindLabel, parser) {
-  const input = document.querySelector(inputId);
-  document.querySelector(buttonId).addEventListener("click", () => input.click());
-  input.addEventListener("change", async () => {
-    if (!input.files?.length) return;
+// Drop or choose any number of files; each is auto-detected and parsed locally,
+// then results are merged into one import + one first-echo moment.
+async function processImportFiles(files) {
+  if (!files.length) return;
+  els.importerMsg.classList.add("hidden", "error");
+  const all = [];
+  let skipped = 0;
+  let skippedKind = "";
+  let sawError = null;
+  for (const file of files) {
     try {
-      const parsed = await parser([...input.files]);
-      await ingestImportedNotes(parsed, kindLabel);
+      const result = await migDetectAndParse(file);
+      if (result?.notes?.length) all.push(...result.notes);
+      if (result?.skipped) {
+        skipped += result.skipped;
+        skippedKind = result.skippedKind ?? skippedKind;
+      }
     } catch (error) {
-      console.error("DockEcho import failed", error);
-      importReportError(t("importErrParse", { kind: kindLabel }));
+      // Handled below with a humane UI message; a warn is the right severity.
+      console.warn("DockEcho couldn't parse", file.name, error?.message ?? error);
+      sawError = error;
     }
-    input.value = "";
-  });
+  }
+  if (!all.length) {
+    if (sawError?.code === "zip-unsupported") importReportError(t("importErrZip"));
+    else if (sawError) importReportError(t("importErrParse"));
+    else importReportError(t("importErrEmpty"));
+    return;
+  }
+  await ingestImportedNotes({ notes: all, skipped, skippedKind });
 }
 
 /* ---------- onboarding ---------- */
@@ -1318,9 +1354,23 @@ els.vaultStatus.addEventListener("click", () => {
 });
 els.openImport.addEventListener("click", openImporter);
 els.importerClose.addEventListener("click", closeImporter);
-wireImportInput("#importKindleBtn", "#importKindleFile", "Kindle", async (files) => parseKindleClippings(await files[0].text()));
-wireImportInput("#importReadwiseBtn", "#importReadwiseFile", "Readwise", async (files) => parseReadwiseCsv(await files[0].text()));
-wireImportInput("#importMdBtn", "#importMdFile", "Markdown", (files) => parseMarkdownFiles(files));
+els.importDrop.addEventListener("click", () => els.importFile.click());
+els.importFile.addEventListener("change", async () => {
+  if (els.importFile.files?.length) await processImportFiles([...els.importFile.files]);
+  els.importFile.value = "";
+});
+["dragenter", "dragover"].forEach((evt) => els.importDrop.addEventListener(evt, (e) => {
+  e.preventDefault();
+  els.importDrop.classList.add("dragover");
+}));
+["dragleave", "drop"].forEach((evt) => els.importDrop.addEventListener(evt, (e) => {
+  e.preventDefault();
+  els.importDrop.classList.remove("dragover");
+}));
+els.importDrop.addEventListener("drop", async (e) => {
+  const files = [...(e.dataTransfer?.files ?? [])];
+  if (files.length) await processImportFiles(files);
+});
 els.onboardVault.addEventListener("click", async () => {
   await openVaultPicker();
 });

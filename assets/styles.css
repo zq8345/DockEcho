@@ -1078,6 +1078,44 @@ h2 {
   text-align: left;
 }
 
+.import-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 32px 24px;
+  border: 1.5px dashed var(--hairline-strong);
+  border-radius: var(--r);
+  background: var(--card-sunk);
+  color: var(--text);
+  text-align: center;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.import-drop:hover,
+.import-drop.dragover {
+  border-color: var(--blue);
+  background: var(--blue-wash);
+}
+
+.import-drop-icon {
+  font-size: var(--t-xl);
+  color: var(--blue);
+  line-height: 1;
+}
+
+.import-drop strong {
+  font-size: var(--t-base);
+  font-weight: 700;
+}
+
+.import-drop-hint {
+  color: var(--faint);
+  font-size: var(--t-xs);
+  line-height: 1.5;
+}
+
 .onboarding-hint {
   margin: 0 0 12px;
   color: var(--faint);
