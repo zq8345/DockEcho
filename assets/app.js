@@ -1179,16 +1179,25 @@ async function ingestImportedNotes(parsed, kindLabel) {
 }
 
 // The magic moment: right after import, surface one echo from the old notes.
+// Prefer connecting an imported note to a note the user already had — that's the
+// "my library recognizes this" moment — falling back to any pair, then to silence.
 function showFirstEcho(imported) {
   echoIndex.sync(state.notes);
+  const importedIds = new Set(imported.map((note) => note.id));
   let best = null;
+  let bestExisting = null;
   imported.forEach((note) => {
     state.notes.forEach((other) => {
       if (other.id === note.id) return;
       const sim = echoIndex.similarity(note.id, other.id);
       if (!best || sim > best.sim) best = { note, other, sim };
+      if (!importedIds.has(other.id) && (!bestExisting || sim > bestExisting.sim)) {
+        bestExisting = { note, other, sim };
+      }
     });
   });
+  // Favor a connection to the existing library when it clears the quality bar.
+  if (bestExisting && bestExisting.sim >= 0.06) best = bestExisting;
   if (!best) {
     els.importerEcho.innerHTML = `<p class="importer-quiet">${escapeHtml(t("importNoEcho"))}</p>`;
     els.importerEcho.classList.remove("hidden");
@@ -1202,7 +1211,7 @@ function showFirstEcho(imported) {
       ? t("ageWeeks", { n: Math.round(days / 7) })
       : t("ageDays", { n: days });
   const why = best.sim >= 0.06 && terms.length
-    ? t("echoWhyTerms", { age, current: best.other.title, terms: terms.join(t("listJoin")) })
+    ? t("echoFirstConnected", { age, other: best.other.title, terms: terms.join(t("listJoin")) })
     : t("echoImportWhy", { age, source: best.note.source ?? best.note.title });
   els.importerEcho.innerHTML = `
     <span class="echo-tag">${escapeHtml(t("importFirstEcho"))}</span>

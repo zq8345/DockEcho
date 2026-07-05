@@ -133,6 +133,7 @@ const I18N = {
     importErrEmpty: "文件里没有找到可导入的内容。",
     importClose: "完成",
     echoImportWhy: "{age}在《{source}》里留下的，今天回到了你面前。",
+    echoFirstConnected: "{age}的一段，和你的《{other}》都提到{terms}。",
 
     statsTitle: "回声统计",
     statsDays: "已陪伴 {n} 天",
@@ -334,6 +335,7 @@ const I18N = {
     importErrEmpty: "No importable content found in the file.",
     importClose: "Done",
     echoImportWhy: "Left in “{source}” {age} — back with you today.",
+    echoFirstConnected: "A passage from {age}, connected to your “{other}” — both mention {terms}.",
 
     statsTitle: "Echo stats",
     statsDays: "{n} days together",

@@ -2,16 +2,22 @@
 // and Today's Echo candidate selection. Pure logic — no DOM, no storage.
 
 const ECHO_STOPWORDS = new Set([
-  // en (~40)
+  // en (~70)
   "the", "a", "an", "and", "or", "but", "if", "then", "else", "for", "of", "to",
   "in", "on", "at", "by", "with", "from", "as", "is", "are", "was", "were", "be",
   "been", "it", "its", "this", "that", "these", "those", "i", "you", "we", "they",
   "he", "she", "my", "your", "our", "not", "no", "do", "does", "did", "can", "will",
+  "about", "into", "out", "over", "what", "which", "when", "where", "how", "why",
+  "than", "just", "only", "also", "very", "too", "their", "them", "there", "here",
+  "would", "should", "could", "have", "has", "had", "being", "more", "most", "some",
+  "any", "all", "one", "so", "up", "own", "them", "such",
   // zh (~40)
   "的", "了", "和", "是", "在", "我", "你", "他", "她", "它", "我们", "你们", "他们",
   "这", "那", "这个", "那个", "一个", "有", "没有", "不", "也", "都", "很", "就",
   "还", "而", "及", "与", "或", "被", "把", "让", "向", "从", "但", "并", "等",
   "着", "过", "吗", "呢", "吧", "啊", "如果", "因为", "所以", "但是", "而且",
+  // import scaffolding — location markers and source tags carry no meaning
+  "loc", "location", "page", "pos", "kindle", "readwise", "highlight",
 ]);
 
 const echoSegmenter = typeof Intl !== "undefined" && Intl.Segmenter
