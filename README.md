@@ -1,14 +1,17 @@
-# DockTodo Local
+# DockEcho
 
-DockTodo 是一个本地优先的轻量知识网络原型，目标是做成“给普通人的本地知识网络”。
+DockEcho 是一个本地优先的轻量知识网络原型，目标是做成“给普通人的本地知识网络”。
+
+官网域名：dockecho.com
 
 定位：
 
-> 像 Apple Notes 一样简单，像 Obsidian 一样长期属于你。
+> 像 Apple Notes 一样简单，像 Obsidian 一样长期属于你。你记下的东西会自己回来找你。
 
 ## 产品规则
 
-- 产品名统一使用 DockTodo，不再使用 DockNote。
+- 产品名统一使用 DockEcho（曾用名 DockTodo、DockNote，均不再使用）。
+- Dock 代表本地母港（数据属于你），Echo 代表知识回流（旧想法会回来找你）。
 - 核心不是待办清单，而是本地知识网络。
 - 打开就能写，不要求用户先学习 Zettelkasten、MOC、PARA 或双链方法论。
 - 数据优先属于用户，当前版本保存在浏览器本地。

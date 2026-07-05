@@ -1,16 +1,16 @@
-const STORAGE_KEY = "docktodo.local.state.v1";
-const LEGACY_STORAGE_KEY = "docknote.local.state.v1";
+const STORAGE_KEY = "dockecho.local.state.v1";
+const LEGACY_STORAGE_KEYS = ["docktodo.local.state.v1", "docknote.local.state.v1"];
 const todayKey = formatDate(new Date());
 
 const seedNotes = [
   {
-    title: "为什么 DockTodo 是本地知识网络",
-    body: "Notion 更适合团队，但对个人来说经常太重。Obsidian 的理念很好：本地、长期、双向链接、知识网络。但小白打开后容易不知道第一步做什么。\n\nDockTodo 要做的是：打开就能写，写完以后系统自动帮你发现相关笔记和主题。\n\n#产品 #知识管理 #本地优先",
+    title: "为什么 DockEcho 是本地知识网络",
+    body: "Notion 更适合团队，但对个人来说经常太重。Obsidian 的理念很好：本地、长期、双向链接、知识网络。但小白打开后容易不知道第一步做什么。\n\nDockEcho 要做的是：打开就能写，写完以后系统自动帮你发现相关笔记和主题。\n\n#产品 #知识管理 #本地优先",
     pinned: true,
   },
   {
     title: "本地优先的价值",
-    body: "本地优先不是复古，而是信任。用户知道自己的笔记属于自己，不会因为平台策略、订阅、网络问题而失去长期积累。\n\n真正的长期知识库要能导出、能迁移、能被普通文件系统理解。\n\n关联：[[为什么 DockTodo 是本地知识网络]]\n\n#隐私 #本地优先 #长期主义",
+    body: "本地优先不是复古，而是信任。用户知道自己的笔记属于自己，不会因为平台策略、订阅、网络问题而失去长期积累。\n\n真正的长期知识库要能导出、能迁移、能被普通文件系统理解。\n\n关联：[[为什么 DockEcho 是本地知识网络]]\n\n#隐私 #本地优先 #长期主义",
     pinned: true,
   },
   {
@@ -19,7 +19,7 @@ const seedNotes = [
   },
   {
     title: `每日笔记 ${todayKey}`,
-    body: "今天的想法：DockTodo 应该像 Apple Notes 一样容易开始，但像 Obsidian 一样能长期积累。\n\n我需要验证：用户是否真的需要“自动关联旧笔记”，还是只需要更好的搜索。\n\n#每日笔记 #验证",
+    body: "今天的想法：DockEcho 应该像 Apple Notes 一样容易开始，但像 Obsidian 一样能长期积累。\n\n我需要验证：用户是否真的需要“自动关联旧笔记”，还是只需要更好的搜索。\n\n#每日笔记 #验证",
     daily: true,
   },
 ];
@@ -81,10 +81,12 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved?.notes?.length) return saved;
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
-    if (legacy?.notes?.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
-      return legacy;
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+      const legacy = JSON.parse(localStorage.getItem(legacyKey));
+      if (legacy?.notes?.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+        return legacy;
+      }
     }
   } catch {
     return structuredClone(defaultState);
@@ -600,7 +602,7 @@ function exportAllNotes() {
   const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `DockTodo-vault-${formatDate(new Date())}.md`;
+  link.download = `DockEcho-vault-${formatDate(new Date())}.md`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
