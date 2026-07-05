@@ -3,6 +3,25 @@
 
 const IMPORT_DAY = 86400000;
 
+// Kindle "Added on" dates. Chinese devices write "2023年5月12日星期五 下午8:44:10",
+// which Date.parse can't read — parse it explicitly so migrating readers keep their
+// real dates (the timestamp-fidelity red line). English/other formats fall back to
+// Date.parse.
+function parseClippingDate(dateText) {
+  if (!dateText) return null;
+  const zh = dateText.match(/(\d{4})年(\d{1,2})月(\d{1,2})日.*?(上午|下午)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (zh) {
+    const [, year, month, day, meridiem, h, min, sec] = zh;
+    let hour = Number(h);
+    if (meridiem === "下午" && hour < 12) hour += 12;
+    if (meridiem === "上午" && hour === 12) hour = 0;
+    const stamp = new Date(Number(year), Number(month) - 1, Number(day), hour, Number(min), Number(sec ?? 0)).getTime();
+    if (Number.isFinite(stamp)) return stamp;
+  }
+  const parsed = Date.parse(dateText.replace(/，/g, ", "));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 // ---------- Kindle My Clippings.txt ----------
 // Entries separated by "==========". Entry shape:
 //   Book Title (Author)
@@ -30,7 +49,7 @@ function parseKindleClippings(text) {
     const location = metaLine.match(/(?:location|位置)\s*#?\s*([\d-]+)/i)?.[1] ?? "";
     const page = metaLine.match(/(?:page|第)\s*([\d-]+)\s*(?:页)?/i)?.[1] ?? "";
     const dateText = metaLine.match(/(?:Added on|添加于)\s*(.+)$/i)?.[1] ?? "";
-    const stamp = dateText ? Date.parse(dateText.replace(/，/g, ", ")) : NaN;
+    const stamp = parseClippingDate(dateText);
     const isNote = /your note|的笔记/i.test(metaLine);
 
     if (!books.has(title)) books.set(title, { title, author, items: [] });

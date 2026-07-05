@@ -365,6 +365,12 @@ a {
   border: 2px solid var(--blue);
 }
 
+.switch-note {
+  margin-top: 10px !important;
+  color: var(--faint) !important;
+  font-size: var(--t-xs) !important;
+}
+
 /* ---------- pricing ---------- */
 
 .land-card.price {

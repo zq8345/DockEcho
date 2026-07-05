@@ -174,11 +174,12 @@ const ECHO_MIN_ONTHISDAY_CHARS = 40;
 // "N years ago today": the strongest emotional hook. A note created N years ago
 // (±1 day) on today's date, with substantial content, outranks the relevance
 // channel — but still respects the one-card-a-day and cooldown rules.
-function pickOnThisDay({ notes, meta, now }) {
+function pickOnThisDay({ notes, meta, now, excludeId = null }) {
   const today = new Date(now);
   const candidates = [];
   notes.forEach((note) => {
     if (!note.createdAt) return;
+    if (note.id === excludeId) return; // never echo the note you're editing
     if ((meta.snoozed?.[note.id] ?? 0) > now) return;
     const lastShown = meta.history?.[note.id] ?? 0;
     if (now - lastShown < ECHO_REPEAT_COOLDOWN_DAYS * ECHO_DAY) return;
@@ -200,12 +201,12 @@ function pickOnThisDay({ notes, meta, now }) {
 
 // meta shape: { lastDate, lastNoteId, closedDate, history: {noteId: lastShownTs},
 //               snoozed: {noteId: untilTs}, dismissed: {noteId: [ [terms...] ]} }
-function pickTodayEcho({ notes, index, meta, now, contextIds }) {
+function pickTodayEcho({ notes, index, meta, now, contextIds, excludeId = null }) {
   if (notes.length < 2 || !contextIds.length) return null;
   index.sync(notes);
 
   // On-this-day channel takes priority when it has something worthy.
-  const anniversary = pickOnThisDay({ notes, meta, now });
+  const anniversary = pickOnThisDay({ notes, meta, now, excludeId });
   if (anniversary) {
     return {
       note: anniversary.note,

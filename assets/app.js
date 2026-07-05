@@ -589,6 +589,7 @@ function currentEcho() {
     meta: echo,
     now: Date.now(),
     contextIds: echoContextIds(),
+    excludeId: state.selectedId,
   });
   if (!pick) return null;
   const why = pick.onThisDayYears
@@ -1137,7 +1138,8 @@ async function ingestImportedNotes(result) {
   const seen = new Set();
   const fresh = parsed.filter((item) => {
     if (!item.title) return false;
-    const key = `${item.title} ${(item.body ?? "").length}`;
+    // Dedup on title + created date — same-titled notes from different dates stay.
+    const key = `${item.title} ${item.createdAt ?? ""}`;
     if (existingTitles.has(item.title) || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1185,6 +1187,9 @@ async function ingestImportedNotes(result) {
       : result.skippedKind === "attachment" ? t("kindAttachment")
       : result.skippedKind;
     parts.push(t("importSkipped", { n: result.skipped, kind }));
+  }
+  if (result.notionUndated > 0) {
+    parts.push(t("importNotionNoDate", { n: result.notionUndated }));
   }
   els.importerMsg.textContent = parts.join(" · ");
   els.importerMsg.classList.remove("hidden", "error");
@@ -1265,6 +1270,7 @@ async function processImportFiles(files) {
   const all = [];
   let skipped = 0;
   let skippedKind = "";
+  let notionUndated = 0;
   let sawError = null;
   for (const file of files) {
     try {
@@ -1274,6 +1280,7 @@ async function processImportFiles(files) {
         skipped += result.skipped;
         skippedKind = result.skippedKind ?? skippedKind;
       }
+      if (result?.notionUndated) notionUndated += result.notionUndated;
     } catch (error) {
       // Handled below with a humane UI message; a warn is the right severity.
       console.warn("DockEcho couldn't parse", file.name, error?.message ?? error);
@@ -1286,7 +1293,7 @@ async function processImportFiles(files) {
     else importReportError(t("importErrEmpty"));
     return;
   }
-  await ingestImportedNotes({ notes: all, skipped, skippedKind });
+  await ingestImportedNotes({ notes: all, skipped, skippedKind, notionUndated });
 }
 
 /* ---------- onboarding ---------- */

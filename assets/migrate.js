@@ -168,7 +168,10 @@ async function migParseMdZip(entries) {
     if (!text.trim()) continue;
     notes.push(migParseMdFile(entry.name, text, sourceTag));
   }
-  return { notes, skipped: skippedDbs, skippedKind: "database CSV" };
+  // Notion markdown exports usually omit creation dates — report how many notes
+  // fell back to the import date so the summary can stay honest.
+  const notionUndated = isNotion ? notes.filter((n) => !n.createdAt).length : 0;
+  return { notes, skipped: skippedDbs, skippedKind: "database CSV", notionUndated };
 }
 
 /* ---------------- Evernote ENEX ---------------- */
@@ -215,7 +218,8 @@ function migParseDayOne(jsonText) {
   if (!Array.isArray(entries)) throw new Error("dayone: no entries array");
   const notes = entries.map((entry) => {
     const text = entry.text ?? entry.richText ?? "";
-    const body = migStripHtml(text.includes("<") ? text : text);
+    // Day One `text` is Markdown; only strip when it actually contains HTML tags.
+    const body = /<[a-z][\s\S]*>/i.test(text) ? migStripHtml(text) : text;
     return migNote({
       title: migTitleFromBody(body, entry.creationDate ? String(entry.creationDate).slice(0, 10) : "Journal"),
       body,
@@ -283,29 +287,7 @@ function migParseKeep(jsonText) {
 /* ---------------- format detection + dispatch ---------------- */
 // Detect by content first (robust to wrong extensions), extension as a hint.
 
-async function migDetectAndParse(file) {
-  const name = file.name.toLowerCase();
-  if (name.endsWith(".zip")) return migParseZipArchive(file);
-  if (name.endsWith(".enex")) return migParseEnex(await file.text());
-
-  const text = await file.text();
-  const head = text.slice(0, 4000).trimStart();
-
-  if (name.endsWith(".enex") || head.startsWith("<?xml") && /<en-export|<note>/.test(head)) {
-    return migParseEnex(text);
-  }
-  if (name.endsWith(".json") || head.startsWith("{") || head.startsWith("[")) {
-    return migDispatchJson(text);
-  }
-  if (name.endsWith(".csv") || /^[^\n]*,[^\n]*,/.test(head)) {
-    const notes = parseReadwiseCsv(text);
-    if (notes === null) throw new Error("csv: unrecognized columns");
-    return { notes, skipped: 0 };
-  }
-  if (/==========/.test(text)) {
-    return { notes: parseKindleClippings(text), skipped: 0 };
-  }
-  // default: treat as a single markdown/plain note (skip if empty)
+function migMarkdownNote(file, text) {
   if (!text.trim()) return { notes: [], skipped: 0 };
   return {
     notes: [migNote({
@@ -317,6 +299,50 @@ async function migDetectAndParse(file) {
     })],
     skipped: 0,
   };
+}
+
+// A Readwise CSV header carries a highlight column and a book/title column.
+function isReadwiseCsvHead(head) {
+  const firstLine = head.split(/\r?\n/)[0].toLowerCase();
+  return /(^|,)\s*"?highlight/.test(firstLine) && /(book|title)/.test(firstLine);
+}
+
+async function migDetectAndParse(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".zip")) return migParseZipArchive(file);
+  if (name.endsWith(".enex")) return migParseEnex(await file.text());
+
+  const text = await file.text();
+  const head = text.slice(0, 4000).trimStart();
+
+  // Extension-priority markdown/plain text, ahead of any content heuristic, so
+  // prose whose first line has commas is never misrouted to the CSV parser.
+  if (/\.(md|markdown)$/i.test(name)) return migMarkdownNote(file, text);
+  if (/\.txt$/i.test(name)) {
+    if (/==========/.test(text)) return { notes: parseKindleClippings(text), skipped: 0 };
+    return migMarkdownNote(file, text);
+  }
+
+  if (name.endsWith(".enex") || (head.startsWith("<?xml") && /<en-export|<note>/.test(head))) {
+    return migParseEnex(text);
+  }
+  if (name.endsWith(".json") || head.startsWith("{") || head.startsWith("[")) {
+    return migDispatchJson(text);
+  }
+  if (name.endsWith(".csv")) {
+    const notes = parseReadwiseCsv(text);
+    if (notes === null) throw new Error("csv: unrecognized columns");
+    return { notes, skipped: 0 };
+  }
+  // Content-sniff CSV only when the Readwise header signature is present.
+  if (isReadwiseCsvHead(head)) {
+    const notes = parseReadwiseCsv(text);
+    if (notes) return { notes, skipped: 0 };
+  }
+  if (/==========/.test(text)) {
+    return { notes: parseKindleClippings(text), skipped: 0 };
+  }
+  return migMarkdownNote(file, text);
 }
 
 function migDispatchJson(text) {
