@@ -76,6 +76,9 @@ const els = {
   relatedList: document.querySelector("#relatedList"),
   backlinkList: document.querySelector("#backlinkList"),
   suggestionList: document.querySelector("#suggestionList"),
+  insightPane: document.querySelector("#insightPane"),
+  insightToggle: document.querySelector("#insightToggle"),
+  insightClose: document.querySelector("#insightClose"),
   clusterBoard: document.querySelector("#clusterBoard"),
   strongConnections: document.querySelector("#strongConnections"),
   orphanNotes: document.querySelector("#orphanNotes"),
@@ -134,6 +137,7 @@ function normalizeState(nextState) {
   nextState.onboarded ??= true;
   nextState.echo ??= {};
   nextState.stats ??= {};
+  nextState.insightOpen = Boolean(nextState.insightOpen);
   nextState.notes = (nextState.notes ?? []).map((note) => ({
     id: note.id ?? createId(),
     title: note.title || t("untitled"),
@@ -211,6 +215,9 @@ function relatedNotes(note, limit = 5) {
   echoIndex.sync(state.notes);
   const tags = new Set(extractTags(note.body));
   const links = new Set(extractLinks(note.body));
+  // Notes the user marked "not relevant" get their score gently downweighted —
+  // negative feedback should actually count, without erasing them entirely.
+  const dismissed = new Set(Object.keys(echoStore().echo.dismissed ?? {}));
   return state.notes
     .filter((item) => item.id !== note.id)
     .map((item) => {
@@ -220,6 +227,7 @@ function relatedNotes(note, limit = 5) {
       });
       if (links.has(item.title)) score += 10;
       if (extractLinks(item.body).includes(note.title)) score += 8;
+      if (dismissed.has(item.id)) score *= 0.3;
       return { note: item, score: Math.round(score) };
     })
     .filter((item) => item.score >= 3)
@@ -849,9 +857,16 @@ function renderLibrary() {
 
 function renderInsights() {
   const note = selectedNote();
-  renderMiniList(els.relatedList, relatedNotes(note), t("emptyRelated"));
+  const related = relatedNotes(note);
+  renderMiniList(els.relatedList, related, t("emptyRelated"));
   renderMiniList(els.backlinkList, backlinks(note), t("emptyBacklinks"));
   renderSuggestions(note);
+
+  // The pane is a quiet slide-out — collapsed until the user asks for it.
+  els.insightPane.classList.toggle("open", state.insightOpen);
+  els.insightToggle.classList.toggle("active", state.insightOpen);
+  els.insightToggle.setAttribute("aria-expanded", String(state.insightOpen));
+  els.insightToggle.title = `${t("insightToggle")} · ${related.length}`;
 }
 
 function renderMiniList(container, items, emptyText) {
@@ -1358,6 +1373,16 @@ els.langToggle.addEventListener("click", () => {
 els.openVault.addEventListener("click", openVaultPicker);
 els.vaultStatus.addEventListener("click", () => {
   if (runtime.pendingHandle) resumePendingVault();
+});
+els.insightToggle.addEventListener("click", () => {
+  state.insightOpen = !state.insightOpen;
+  saveState();
+  render(false);
+});
+els.insightClose.addEventListener("click", () => {
+  state.insightOpen = false;
+  saveState();
+  render(false);
 });
 els.openImport.addEventListener("click", openImporter);
 els.importerClose.addEventListener("click", closeImporter);

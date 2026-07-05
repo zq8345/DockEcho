@@ -87,6 +87,7 @@
             <button class="soft-btn" id="exportNote" type="button" data-i18n="exportNote">导出当前</button>
             <button class="soft-btn" id="exportAll" type="button" data-i18n="exportAll">导出全部</button>
             <button class="primary-btn" id="smartOrganize" type="button" data-i18n="smartOrganize">发现连接</button>
+            <button class="icon-btn insight-toggle" id="insightToggle" type="button" aria-expanded="false">◧</button>
           </div>
         </header>
 
@@ -139,7 +140,11 @@
         </section>
       </section>
 
-      <aside class="insight-pane" aria-label="Insights">
+      <aside class="insight-pane" id="insightPane" aria-label="Insights">
+        <div class="insight-head">
+          <span class="section-title flat" data-i18n="insightPaneTitle">相关信息</span>
+          <button class="icon-btn" id="insightClose" type="button" data-i18n-title="insightCollapse" title="收起">✕</button>
+        </div>
         <section class="insight-card ownership">
           <span>Local-first</span>
           <strong data-i18n="ownershipTitle">你的知识长期属于你</strong>

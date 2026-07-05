@@ -85,7 +85,7 @@ h2 {
 
 .app {
   display: grid;
-  grid-template-columns: 64px 240px minmax(0, 1fr) 264px;
+  grid-template-columns: 64px 240px minmax(0, 1fr);
   gap: 16px;
   height: 100vh;
   padding: 16px;
@@ -160,8 +160,7 @@ h2 {
 /* ---------- sidebar ---------- */
 
 .sidebar,
-.main-pane,
-.insight-pane {
+.main-pane {
   min-width: 0;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
@@ -949,14 +948,57 @@ h2 {
   color: var(--text);
 }
 
-/* ---------- insight pane (right column ≥1280) ---------- */
+/* ---------- insight pane: a quiet slide-out, collapsed by default ---------- */
+
+.insight-toggle {
+  color: var(--muted);
+}
+
+.insight-toggle:hover,
+.insight-toggle.active {
+  color: var(--blue);
+  background: var(--blue-wash);
+}
 
 .insight-pane {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  width: 300px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px;
   overflow: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  transform: translateX(340px);
+  transition: transform 240ms ease;
+}
+
+.insight-pane.open {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-pane {
+    transition: none;
+  }
+}
+
+.insight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.insight-head .section-title {
+  padding: 0;
 }
 
 .insight-card {
@@ -1177,51 +1219,23 @@ h2 {
   display: none !important;
 }
 
-/* ---------- responsive: below 1280 the insight pane joins the main flow ---------- */
-
-@media (max-width: 1279px) {
-  body {
-    overflow: auto;
-  }
-
-  .app {
-    grid-template-columns: 64px 240px minmax(0, 1fr);
-    height: auto;
-    min-height: 100vh;
-  }
-
-  .rail {
-    position: sticky;
-    top: 16px;
-    height: calc(100vh - 32px);
-  }
-
-  .sidebar {
-    max-height: calc(100vh - 32px);
-    position: sticky;
-    top: 16px;
-  }
-
-  /* Insight becomes a clean equal-card band under the editor, not a floating panel. */
-  .insight-pane {
-    grid-column: 2 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    align-items: start;
-    background: transparent;
-    border: 0;
-    padding: 0;
-  }
-}
+/* ---------- responsive ---------- */
 
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 56px minmax(0, 1fr);
     gap: 12px;
     padding: 12px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  body {
+    overflow: auto;
   }
 
   .rail {
+    position: sticky;
     top: 12px;
     height: calc(100vh - 24px);
   }
@@ -1232,13 +1246,17 @@ h2 {
     position: static;
   }
 
-  .main-pane,
-  .insight-pane {
+  .main-pane {
     grid-column: 2;
   }
 
   .insight-pane {
-    grid-column: 1 / -1;
+    top: auto;
+    width: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-height: 80vh;
   }
 
   .write-view,

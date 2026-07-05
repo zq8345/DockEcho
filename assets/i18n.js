@@ -38,6 +38,9 @@ const I18N = {
     relatedTitle: "相关笔记",
     backlinkTitle: "反向链接",
     suggestionTitle: "可连接的想法",
+    insightPaneTitle: "相关信息",
+    insightToggle: "相关",
+    insightCollapse: "收起",
 
     viewWrite: "写作",
     viewLibrary: "笔记库",
@@ -266,6 +269,9 @@ const I18N = {
     relatedTitle: "Related notes",
     backlinkTitle: "Backlinks",
     suggestionTitle: "Ideas to connect",
+    insightPaneTitle: "Related",
+    insightToggle: "Related",
+    insightCollapse: "Collapse",
 
     viewWrite: "Write",
     viewLibrary: "Library",
