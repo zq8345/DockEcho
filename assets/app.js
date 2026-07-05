@@ -84,6 +84,12 @@ const els = {
   themeReview: document.querySelector("#themeReview"),
   connectionReview: document.querySelector("#connectionReview"),
   echoCard: document.querySelector("#echoCard"),
+  echoStats: document.querySelector("#echoStats"),
+  openImport: document.querySelector("#openImport"),
+  importer: document.querySelector("#importer"),
+  importerClose: document.querySelector("#importerClose"),
+  importerMsg: document.querySelector("#importerMsg"),
+  importerEcho: document.querySelector("#importerEcho"),
   openVault: document.querySelector("#openVault"),
   vaultStatus: document.querySelector("#vaultStatus"),
   onboarding: document.querySelector("#onboarding"),
@@ -472,6 +478,7 @@ async function mountVault(handle, { askMigrate = true } = {}) {
   }
 
   runtime.mode = "vault";
+  meta.stats.firstUseAt ??= Date.now();
   state.notes = notes.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
   state.selectedId = state.notes[0]?.id ?? "";
   state.onboarded = true;
@@ -970,6 +977,24 @@ function renderReview() {
     els.connectionReview.append(row);
   });
   if (!related.length) els.connectionReview.innerHTML = `<div class="empty-mini">${t("emptyReviewLinks")}</div>`;
+
+  renderEchoStats();
+}
+
+function renderEchoStats() {
+  const { stats } = echoStore();
+  const days = Math.max(1, Math.ceil((Date.now() - (stats.firstUseAt ?? Date.now())) / DAY_MS));
+  const rows = [
+    [t("statsShown"), stats.echoShown ?? 0],
+    [t("statsOpened"), stats.echoOpened ?? 0],
+    [t("statsInserted"), stats.echoInserted ?? 0],
+    [t("statsDismissed"), stats.echoDismissed ?? 0],
+  ];
+  els.echoStats.innerHTML = `
+    <p class="stat-days">${escapeHtml(t("statsDays", { n: days }))}</p>
+    ${rows.map(([label, n]) => `<div class="stat-row"><span>${escapeHtml(label)}</span><strong>${n}</strong></div>`).join("")}
+    <div class="stat-row north"><span>${escapeHtml(t("statsNorth"))}</span><strong>${stats.oldEchoOpened ?? 0}</strong></div>
+  `;
 }
 
 /* ---------- misc actions ---------- */
@@ -1084,6 +1109,148 @@ function installGlassInteractions() {
   });
 }
 
+/* ---------- importers ---------- */
+
+function openImporter() {
+  els.importerMsg.classList.add("hidden");
+  els.importerMsg.classList.remove("error");
+  els.importerEcho.classList.add("hidden");
+  els.importerEcho.replaceChildren();
+  els.importer.classList.remove("hidden");
+}
+
+function closeImporter() {
+  els.importer.classList.add("hidden");
+}
+
+function importReportError(text) {
+  els.importerMsg.textContent = text;
+  els.importerMsg.classList.add("error");
+  els.importerMsg.classList.remove("hidden");
+}
+
+async function ingestImportedNotes(parsed, kindLabel) {
+  if (parsed === null) {
+    importReportError(t("importErrParse", { kind: kindLabel }));
+    return;
+  }
+  const existingTitles = new Set(state.notes.map((note) => note.title));
+  const fresh = parsed.filter((item) => item.title && !existingTitles.has(item.title));
+  if (!fresh.length) {
+    importReportError(t("importErrEmpty"));
+    return;
+  }
+  const imported = [];
+  for (const item of fresh) {
+    const note = {
+      id: createId(),
+      title: item.title,
+      body: item.body,
+      pinned: false,
+      daily: false,
+      createdAt: item.createdAt ?? Date.now(),
+      updatedAt: item.updatedAt ?? Date.now(),
+      source: item.source ?? item.title,
+    };
+    if (runtime.mode === "vault") {
+      try {
+        const path = await vaultCreateNote(runtime.dirHandle, note.title, note.body);
+        note.id = path;
+        note.path = path;
+        setVaultNoteMeta(note);
+      } catch (error) {
+        console.error("DockEcho import write failed", note.title, error);
+        continue;
+      }
+    }
+    state.notes.push(note);
+    imported.push(note);
+  }
+  if (!imported.length) {
+    importReportError(t("importErrEmpty"));
+    return;
+  }
+  state.notes.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+  saveState();
+  render(false);
+  els.importerMsg.textContent = t("importDone", { n: imported.length });
+  els.importerMsg.classList.remove("hidden", "error");
+  showFirstEcho(imported);
+}
+
+// The magic moment: right after import, surface one echo from the old notes.
+function showFirstEcho(imported) {
+  echoIndex.sync(state.notes);
+  let best = null;
+  imported.forEach((note) => {
+    state.notes.forEach((other) => {
+      if (other.id === note.id) return;
+      const sim = echoIndex.similarity(note.id, other.id);
+      if (!best || sim > best.sim) best = { note, other, sim };
+    });
+  });
+  if (!best) {
+    els.importerEcho.innerHTML = `<p class="importer-quiet">${escapeHtml(t("importNoEcho"))}</p>`;
+    els.importerEcho.classList.remove("hidden");
+    return;
+  }
+  const terms = echoIndex.sharedTerms(best.other.id, best.note.id, 2);
+  const days = Math.max(1, Math.floor((Date.now() - best.note.createdAt) / DAY_MS));
+  const age = days >= 60
+    ? t("ageMonths", { n: Math.max(2, Math.round(days / 30)) })
+    : days >= 14
+      ? t("ageWeeks", { n: Math.round(days / 7) })
+      : t("ageDays", { n: days });
+  const why = best.sim >= 0.06 && terms.length
+    ? t("echoWhyTerms", { age, current: best.other.title, terms: terms.join(t("listJoin")) })
+    : t("echoImportWhy", { age, source: best.note.source ?? best.note.title });
+  els.importerEcho.innerHTML = `
+    <span class="echo-tag">${escapeHtml(t("importFirstEcho"))}</span>
+    <strong>${escapeHtml(best.note.title)}</strong>
+    <p class="echo-why">${escapeHtml(why)}</p>
+    <p class="echo-snippet">${escapeHtml(snippet(best.note.body, 140))}</p>
+    <button class="primary-btn" type="button" id="importerOpenEcho">${escapeHtml(t("echoOpen"))}</button>
+  `;
+  els.importerEcho.classList.remove("hidden");
+  document.querySelector("#importerOpenEcho")?.addEventListener("click", () => {
+    closeImporter();
+    selectNote(best.note.id);
+  });
+
+  // If it clears the daily-card quality bar, let today's card show it too.
+  if (best.sim >= 0.08 && terms.length) {
+    const { echo, stats, save } = echoStore();
+    if (echo.lastDate !== todayKey || !echo.lastNoteId) {
+      echo.lastDate = todayKey;
+      echo.lastNoteId = best.note.id;
+      echo.lastTerms = terms;
+      echo.lastContextId = best.other.id;
+      echo.lastContextTerms = echoIndex.topTerms(best.other.id, 12);
+      echo.closedDate = "";
+      echo.history ??= {};
+      echo.history[best.note.id] = Date.now();
+      stats.echoShown = (stats.echoShown ?? 0) + 1;
+      save();
+    }
+  }
+}
+
+function wireImportInput(buttonId, inputId, kindLabel, parser) {
+  const input = document.querySelector(inputId);
+  document.querySelector(buttonId).addEventListener("click", () => input.click());
+  input.addEventListener("change", async () => {
+    if (!input.files?.length) return;
+    try {
+      const parsed = await parser([...input.files]);
+      await ingestImportedNotes(parsed, kindLabel);
+    } catch (error) {
+      console.error("DockEcho import failed", error);
+      importReportError(t("importErrParse", { kind: kindLabel }));
+    }
+    input.value = "";
+  });
+}
+
 /* ---------- onboarding ---------- */
 
 function initOnboarding() {
@@ -1147,6 +1314,11 @@ els.openVault.addEventListener("click", openVaultPicker);
 els.vaultStatus.addEventListener("click", () => {
   if (runtime.pendingHandle) resumePendingVault();
 });
+els.openImport.addEventListener("click", openImporter);
+els.importerClose.addEventListener("click", closeImporter);
+wireImportInput("#importKindleBtn", "#importKindleFile", "Kindle", async (files) => parseKindleClippings(await files[0].text()));
+wireImportInput("#importReadwiseBtn", "#importReadwiseFile", "Readwise", async (files) => parseReadwiseCsv(await files[0].text()));
+wireImportInput("#importMdBtn", "#importMdFile", "Markdown", (files) => parseMarkdownFiles(files));
 els.onboardVault.addEventListener("click", async () => {
   await openVaultPicker();
 });
@@ -1162,6 +1334,7 @@ function applyI18n() {
   els.langToggle.textContent = t("switchTo");
 }
 
+state.stats.firstUseAt ??= Date.now();
 installGlassInteractions();
 saveState();
 render();

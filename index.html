@@ -3,181 +3,193 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DockEcho</title>
-    <meta name="description" content="Local-first knowledge network — your notes come back to you." />
+    <title>DockEcho — your notes come back to you</title>
+    <meta name="description" content="Local-first knowledge notes that resurface old ideas when they matter. Plain Markdown files on your disk. Mount your Obsidian vault. No account, no telemetry." />
+    <link rel="canonical" href="https://www.dockecho.com/" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./assets/styles.css" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DockEcho" />
+    <meta property="og:title" content="DockEcho — your notes come back to you" />
+    <meta property="og:description" content="Local-first knowledge notes that resurface old ideas when they matter. Plain Markdown on your disk. No account needed." />
+    <meta property="og:url" content="https://www.dockecho.com/" />
+    <meta property="og:image" content="https://www.dockecho.com/assets/brand-mark.svg" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="DockEcho — your notes come back to you" />
+    <meta name="twitter:description" content="Local-first notes that resurface old ideas when they matter." />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "DockEcho",
+      "url": "https://www.dockecho.com/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web",
+      "description": "Local-first knowledge notes that resurface old ideas when they matter. Plain Markdown files on your disk.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="./assets/landing.css" />
   </head>
-  <body>
-    <main class="app" aria-label="DockEcho">
-      <aside class="rail" aria-label="Navigation">
-        <div class="brand" title="DockEcho">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="14" y="12" width="7" height="40" rx="3.5" fill="currentColor"/>
-            <path d="M28.5 24.5 A8.7 8.7 0 0 1 28.5 39.5" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-            <path d="M32.3 17.8 A16.4 16.4 0 0 1 32.3 46.2" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.66"/>
-            <path d="M36 11.3 A23.9 23.9 0 0 1 36 52.7" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.36"/>
-            <circle cx="22.5" cy="32" r="4" fill="currentColor"/>
-          </svg>
-        </div>
-        <button class="rail-btn active" type="button" data-view="write" data-i18n-title="railWrite" title="写作">✎</button>
-        <button class="rail-btn" type="button" data-view="library" data-i18n-title="railLibrary" title="笔记库">☰</button>
-        <button class="rail-btn" type="button" data-view="network" data-i18n-title="railNetwork" title="知识网络">◎</button>
-        <button class="rail-btn" type="button" data-view="review" data-i18n-title="railReview" title="知识回流">↺</button>
-        <button class="rail-btn bottom" type="button" id="langToggle" data-i18n-title="railLang" title="Switch language">EN</button>
-        <button class="rail-btn" type="button" id="themeToggle" data-i18n-title="railTheme" title="切换主题">◐</button>
-      </aside>
-
-      <aside class="sidebar" aria-label="Library">
-        <header class="sidebar-head">
-          <div>
-            <p>DockEcho</p>
-            <h1 data-i18n="appSubtitle">本地知识网络</h1>
-            <button class="vault-status" id="vaultStatus" type="button"></button>
-          </div>
-          <div class="sidebar-head-btns">
-            <button class="icon-btn" id="openVault" type="button" data-i18n-title="openFolder" title="打开文件夹">▤</button>
-            <button class="icon-btn" id="newNote" type="button" data-i18n-title="newNote" title="新建笔记">+</button>
-          </div>
-        </header>
-
-        <div class="search-box">
-          <input id="searchInput" type="search" data-i18n-placeholder="searchPlaceholder" placeholder="搜索笔记、标签或想法" autocomplete="off" />
-        </div>
-
-        <nav class="nav-list" aria-label="Filters">
-          <button class="nav-item active" type="button" data-filter="all">
-            <span>◇</span><span data-i18n="navAll">全部笔记</span><span class="nav-count" id="countAll">0</span>
-          </button>
-          <button class="nav-item" type="button" data-filter="daily">
-            <span>☀</span><span data-i18n="navDaily">每日笔记</span><span class="nav-count" id="countDaily">0</span>
-          </button>
-          <button class="nav-item" type="button" data-filter="pinned">
-            <span>★</span><span data-i18n="navPinned">置顶</span><span class="nav-count" id="countPinned">0</span>
-          </button>
-          <button class="nav-item" type="button" data-filter="unlinked">
-            <span>○</span><span data-i18n="navUnlinked">待连接</span><span class="nav-count" id="countUnlinked">0</span>
-          </button>
-        </nav>
-
-        <section class="side-section">
-          <div class="section-title">
-            <span data-i18n="sideTopics">主题</span>
-            <button class="plain-btn" id="dailyNote" type="button" data-i18n="sideToday">今天</button>
-          </div>
-          <div class="tag-list" id="tagList"></div>
-        </section>
-
-        <section class="side-section grow">
-          <div class="section-title">
-            <span data-i18n="sideRecent">最近笔记</span>
-            <button class="plain-btn" id="clearSearch" type="button" data-i18n="sideClear">清空</button>
-          </div>
-          <div class="note-list" id="noteList"></div>
-        </section>
-      </aside>
-
-      <section class="main-pane" aria-label="Editor">
-        <header class="pane-head">
-          <div>
-            <p id="viewMeta"></p>
-            <h2 id="viewTitle">写作</h2>
-          </div>
-          <div class="head-actions">
-            <button class="soft-btn" id="insertLink" type="button" data-i18n="insertLink">插入链接</button>
-            <button class="soft-btn" id="exportNote" type="button" data-i18n="exportNote">导出当前</button>
-            <button class="soft-btn" id="exportAll" type="button" data-i18n="exportAll">导出全部</button>
-            <button class="primary-btn" id="smartOrganize" type="button" data-i18n="smartOrganize">自动整理</button>
-          </div>
-        </header>
-
-        <section class="write-view" id="writeView">
-          <section class="echo-card hidden" id="echoCard"></section>
-          <div class="editor-shell">
-            <input id="noteTitle" class="title-input" type="text" maxlength="120" data-i18n-placeholder="titlePlaceholder" placeholder="给这个想法起个名字" />
-            <div class="note-meta" id="noteMeta"></div>
-            <textarea id="noteBody" class="note-editor" data-i18n-placeholder="bodyPlaceholder" placeholder="直接写。可以用 #标签，也可以输入 [[另一条笔记]] 建立连接。"></textarea>
-          </div>
-        </section>
-
-        <section class="library-view hidden" id="libraryView">
-          <div class="library-grid" id="libraryGrid"></div>
-        </section>
-
-        <section class="network-view hidden" id="networkView">
-          <div class="network-grid">
-            <section class="network-card wide">
-              <div class="section-title flat"><span data-i18n="clusterTitle">主题簇</span></div>
-              <div class="cluster-board" id="clusterBoard"></div>
-            </section>
-            <section class="network-card">
-              <div class="section-title flat"><span data-i18n="strongTitle">强连接</span></div>
-              <div class="connection-list" id="strongConnections"></div>
-            </section>
-            <section class="network-card">
-              <div class="section-title flat"><span data-i18n="orphanTitle">孤立想法</span></div>
-              <div class="connection-list" id="orphanNotes"></div>
-            </section>
-          </div>
-        </section>
-
-        <section class="review-view hidden" id="reviewView">
-          <div class="review-grid">
-            <section class="review-card hero-review" id="memoryCard"></section>
-            <section class="review-card">
-              <div class="section-title flat"><span data-i18n="reviewThemes">最近反复出现的主题</span></div>
-              <div id="themeReview" class="theme-review"></div>
-            </section>
-            <section class="review-card">
-              <div class="section-title flat"><span data-i18n="reviewConnections">建议你补上的连接</span></div>
-              <div id="connectionReview" class="connection-list"></div>
-            </section>
-          </div>
-        </section>
-      </section>
-
-      <aside class="insight-pane" aria-label="Insights">
-        <section class="insight-card ownership">
-          <span>Local-first</span>
-          <strong data-i18n="ownershipTitle">你的知识长期属于你</strong>
-          <p data-i18n="ownershipBody">当前笔记保存在浏览器本地，可导出 Markdown。先让积累属于用户，再考虑同步、AI 和发布。</p>
-        </section>
-
-        <section class="insight-card">
-          <div class="section-title flat"><span data-i18n="relatedTitle">相关笔记</span></div>
-          <div id="relatedList" class="mini-list"></div>
-        </section>
-
-        <section class="insight-card">
-          <div class="section-title flat"><span data-i18n="backlinkTitle">反向链接</span></div>
-          <div id="backlinkList" class="mini-list"></div>
-        </section>
-
-        <section class="insight-card">
-          <div class="section-title flat"><span data-i18n="suggestionTitle">可连接的想法</span></div>
-          <div id="suggestionList" class="mini-list"></div>
-        </section>
-      </aside>
-    </main>
-
-    <div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true">
-      <div class="onboarding-card">
-        <img class="onboarding-logo" src="./assets/brand-mark.svg" alt="DockEcho" width="72" height="72" />
-        <h2 data-i18n="onboardTitle">你的笔记，会自己回来找你</h2>
-        <p class="onboarding-tagline" data-i18n="onboardTagline">本地优先。你的 Markdown 文件，你的电脑，你的知识。</p>
-        <div class="onboarding-actions">
-          <button class="primary-btn" id="onboardVault" type="button" data-i18n="onboardOpenFolder">打开我的笔记文件夹</button>
-          <p class="onboarding-hint" id="onboardVaultHint" data-i18n="onboardObsidianHint">兼容 Obsidian 库——直接挂载，不迁移、不改动你的文件。</p>
-          <p class="onboarding-hint warn hidden" id="onboardUnsupported" data-i18n="folderUnsupported">文件夹模式需要桌面版 Chrome / Edge。</p>
-          <button class="soft-btn" id="onboardBrowser" type="button" data-i18n="onboardBrowser">先在浏览器里试试</button>
-          <p class="onboarding-hint" data-i18n="onboardBrowserHint">数据保存在本机浏览器，可随时导出或迁入文件夹。</p>
-        </div>
-      </div>
+  <body class="landing">
+    <div class="return-banner hidden" id="returnBanner">
+      <a href="./app.html" data-i18n="landBack">回到我的笔记 →</a>
     </div>
 
+    <header class="land-header">
+      <a class="land-brand" href="./">
+        <img src="./assets/brand-mark.svg" alt="" width="34" height="34" />
+        <span>DockEcho</span>
+      </a>
+      <nav class="land-nav">
+        <a class="land-nav-link" href="#pricing" data-i18n="landNavPricing">定价</a>
+        <a class="land-nav-link" href="./app.html" data-i18n="landNavApp">打开应用</a>
+        <button class="land-lang" id="landLang" type="button">EN</button>
+      </nav>
+    </header>
+
+    <main class="land-main">
+      <section class="land-hero">
+        <h1 data-i18n="landHeroTitle">你记下的东西，会自己回来找你</h1>
+        <p class="land-sub" data-i18n="landHeroSub">本地优先的知识笔记。纯 Markdown 文件，就在你的磁盘上。</p>
+        <div class="land-cta">
+          <a class="land-btn primary" href="./app.html" data-i18n="landCtaApp">打开应用——免费，无需注册</a>
+          <a class="land-btn ghost" href="#founding" data-i18n="landCtaFounding">成为创始会员</a>
+        </div>
+
+        <div class="land-echo-demo" aria-hidden="true">
+          <span class="demo-tag" data-i18n="echoTitle">今日回声</span>
+          <strong data-i18n="landDemoTitle">长期主义与写作</strong>
+          <p class="demo-why" data-i18n="landDemoWhy">3 个月前写的，和你正在写的《写作复利实验》都提到复利。</p>
+          <div class="demo-actions">
+            <span data-i18n="echoOpen">打开</span>
+            <span data-i18n="echoInsert">插入链接</span>
+            <span data-i18n="echoSnooze">稍后</span>
+            <span data-i18n="echoDismiss">不相关</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="land-section">
+        <h2 data-i18n="landHowTitle">回声是怎么发生的</h2>
+        <div class="land-grid three">
+          <article class="land-card">
+            <span class="land-step">1</span>
+            <h3 data-i18n="landStep1T">直接写</h3>
+            <p data-i18n="landStep1B">打开就写。不用先学方法论，不用先搭结构。顺手一个 #标签 就够了。</p>
+          </article>
+          <article class="land-card">
+            <span class="land-step">2</span>
+            <h3 data-i18n="landStep2T">笔记自己连接</h3>
+            <p data-i18n="landStep2B">DockEcho 在你的设备上读懂每条笔记，安静地找出相关的旧想法和主题。</p>
+          </article>
+          <article class="land-card">
+            <span class="land-step">3</span>
+            <h3 data-i18n="landStep3T">旧想法在对的时候回来</h3>
+            <p data-i18n="landStep3B">每天最多一张回声卡，永远带着"为什么回来"。不相关的日子，我们保持安静。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="land-section">
+        <h2 data-i18n="landTrustTitle">你的知识，长期属于你</h2>
+        <div class="land-grid four">
+          <article class="land-card slim">
+            <h3 data-i18n="landTrust1T">真实文件</h3>
+            <p data-i18n="landTrust1B">笔记是磁盘上的 .md 文件，不是数据库里的记录。</p>
+          </article>
+          <article class="land-card slim">
+            <h3 data-i18n="landTrust2T">挂载 Obsidian 库</h3>
+            <p data-i18n="landTrust2B">直接打开你现有的 Markdown 文件夹。不迁移，未编辑的文件永远不被改动。</p>
+          </article>
+          <article class="land-card slim">
+            <h3 data-i18n="landTrust3T">随时离开</h3>
+            <p data-i18n="landTrust3B">全库 Markdown 一键导出。没有专有格式，没有绑架。</p>
+          </article>
+          <article class="land-card slim">
+            <h3 data-i18n="landTrust4T">无需账号</h3>
+            <p data-i18n="landTrust4B">不注册也能使用全部本地功能。没有遥测。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="land-section" id="pricing">
+        <h2 data-i18n="landPricingTitle">定价</h2>
+        <div class="land-grid two">
+          <article class="land-card price">
+            <h3>Free</h3>
+            <p class="price-line" data-i18n="landFreePrice">永远免费</p>
+            <ul>
+              <li data-i18n="landFreeF1">全部本地笔记功能</li>
+              <li data-i18n="landFreeF2">文件夹模式（挂载 Obsidian 库）</li>
+              <li data-i18n="landFreeF3">每日回声卡</li>
+              <li data-i18n="landFreeF4">导入与随时导出</li>
+            </ul>
+          </article>
+          <article class="land-card price pro">
+            <h3>Pro</h3>
+            <p class="price-line"><span data-i18n="landProPrice">$12/月</span> <small data-i18n="landProAlt">或 $96/年（≈$8/月）</small></p>
+            <ul>
+              <li data-i18n="landProF1">语义回声——更懂含义的回声</li>
+              <li data-i18n="landProF2">Daily Echo 邮件摘要</li>
+              <li data-i18n="landProF3">Kindle 与 Readwise 连接器</li>
+            </ul>
+            <p class="price-note" data-i18n="landProNote">尚未开售</p>
+          </article>
+        </div>
+
+        <div class="land-founding" id="founding">
+          <h3 data-i18n="landFoundingTitle">创始会员 · $79/年 · 限前 300 席</h3>
+          <p data-i18n="landFoundingSub">尚未开售。留下邮箱，开售时第一时间告诉你——也只告诉你这一件事。</p>
+          <form name="founding-member" method="POST" action="/" data-netlify="true" netlify-honeypot="bot-field" id="foundingForm">
+            <input type="hidden" name="form-name" value="founding-member" />
+            <input type="hidden" name="lang" id="formLang" value="zh" />
+            <p class="hp-field" aria-hidden="true"><label>Don't fill this out: <input name="bot-field" /></label></p>
+            <div class="form-row">
+              <input type="email" name="email" id="formEmail" required placeholder="you@example.com" autocomplete="email" />
+              <button class="land-btn primary" type="submit" data-i18n="landWaitBtn">加入候补名单</button>
+            </div>
+          </form>
+          <p class="form-msg hidden" id="formMsg"></p>
+        </div>
+      </section>
+
+      <section class="land-section">
+        <h2 data-i18n="landFaqTitle">常见问题</h2>
+        <div class="land-faq">
+          <details>
+            <summary data-i18n="landFaq1Q">我的数据存在哪里？</summary>
+            <p data-i18n="landFaq1A">在你的设备上。浏览器模式存在本机浏览器里；文件夹模式就是你磁盘上的 .md 文件。没有云端副本，除非你用自己的方式同步（iCloud、Dropbox、Syncthing 都行）。</p>
+          </details>
+          <details>
+            <summary data-i18n="landFaq2Q">怎么收费？</summary>
+            <p data-i18n="landFaq2A">本地笔记功能永远免费、不限量。将来的 Pro（$12/月或 $96/年）只为增值的回声服务付费：语义回声、每日邮件摘要、阅读连接器。</p>
+          </details>
+          <details>
+            <summary data-i18n="landFaq3Q">和 Obsidian 是什么关系？</summary>
+            <p data-i18n="landFaq3A">好朋友。DockEcho 可以直接挂载你的 Obsidian 库，做你笔记之上的"回声透镜"——不迁移，绝不改动你未在这里编辑过的文件，删除也只进 .trash/。</p>
+          </details>
+          <details>
+            <summary data-i18n="landFaq4Q">有移动端吗？</summary>
+            <p data-i18n="landFaq4A">桌面优先。移动端的快速捕捉在路线图上。</p>
+          </details>
+          <details>
+            <summary data-i18n="landFaq5Q">回声的计算在哪里发生？</summary>
+            <p data-i18n="landFaq5A">全部在本地设备上。你的笔记内容不会离开你的电脑，除非你明确要求。</p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="land-footer">
+      <p data-i18n="landFooterPrivacy">无遥测。除非你明确要求，你的笔记永远不会离开你的设备。</p>
+      <p><a href="https://github.com/zq8345/DockEcho" rel="noopener">GitHub</a> · <span>© 2026 DockEcho</span></p>
+    </footer>
+
     <script src="./assets/i18n.js"></script>
-    <script src="./assets/echo.js"></script>
-    <script src="./assets/vault.js"></script>
-    <script src="./assets/app.js"></script>
+    <script src="./assets/landing.js"></script>
   </body>
 </html>

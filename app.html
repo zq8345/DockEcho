@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DockEcho</title>
+    <meta name="description" content="Local-first knowledge network — your notes come back to you." />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <main class="app" aria-label="DockEcho">
+      <aside class="rail" aria-label="Navigation">
+        <div class="brand" title="DockEcho">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="14" y="12" width="7" height="40" rx="3.5" fill="currentColor"/>
+            <path d="M28.5 24.5 A8.7 8.7 0 0 1 28.5 39.5" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+            <path d="M32.3 17.8 A16.4 16.4 0 0 1 32.3 46.2" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.66"/>
+            <path d="M36 11.3 A23.9 23.9 0 0 1 36 52.7" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity="0.36"/>
+            <circle cx="22.5" cy="32" r="4" fill="currentColor"/>
+          </svg>
+        </div>
+        <button class="rail-btn active" type="button" data-view="write" data-i18n-title="railWrite" title="写作">✎</button>
+        <button class="rail-btn" type="button" data-view="library" data-i18n-title="railLibrary" title="笔记库">☰</button>
+        <button class="rail-btn" type="button" data-view="network" data-i18n-title="railNetwork" title="知识网络">◎</button>
+        <button class="rail-btn" type="button" data-view="review" data-i18n-title="railReview" title="知识回流">↺</button>
+        <button class="rail-btn bottom" type="button" id="langToggle" data-i18n-title="railLang" title="Switch language">EN</button>
+        <button class="rail-btn" type="button" id="themeToggle" data-i18n-title="railTheme" title="切换主题">◐</button>
+      </aside>
+
+      <aside class="sidebar" aria-label="Library">
+        <header class="sidebar-head">
+          <div>
+            <p>DockEcho</p>
+            <h1 data-i18n="appSubtitle">本地知识网络</h1>
+            <button class="vault-status" id="vaultStatus" type="button"></button>
+          </div>
+          <div class="sidebar-head-btns">
+            <button class="icon-btn" id="openVault" type="button" data-i18n-title="openFolder" title="打开文件夹">▤</button>
+            <button class="icon-btn" id="openImport" type="button" data-i18n-title="importOpen" title="带上你的旧笔记">⇪</button>
+            <button class="icon-btn" id="newNote" type="button" data-i18n-title="newNote" title="新建笔记">+</button>
+          </div>
+        </header>
+
+        <div class="search-box">
+          <input id="searchInput" type="search" data-i18n-placeholder="searchPlaceholder" placeholder="搜索笔记、标签或想法" autocomplete="off" />
+        </div>
+
+        <nav class="nav-list" aria-label="Filters">
+          <button class="nav-item active" type="button" data-filter="all">
+            <span>◇</span><span data-i18n="navAll">全部笔记</span><span class="nav-count" id="countAll">0</span>
+          </button>
+          <button class="nav-item" type="button" data-filter="daily">
+            <span>☀</span><span data-i18n="navDaily">每日笔记</span><span class="nav-count" id="countDaily">0</span>
+          </button>
+          <button class="nav-item" type="button" data-filter="pinned">
+            <span>★</span><span data-i18n="navPinned">置顶</span><span class="nav-count" id="countPinned">0</span>
+          </button>
+          <button class="nav-item" type="button" data-filter="unlinked">
+            <span>○</span><span data-i18n="navUnlinked">待连接</span><span class="nav-count" id="countUnlinked">0</span>
+          </button>
+        </nav>
+
+        <section class="side-section">
+          <div class="section-title">
+            <span data-i18n="sideTopics">主题</span>
+            <button class="plain-btn" id="dailyNote" type="button" data-i18n="sideToday">今天</button>
+          </div>
+          <div class="tag-list" id="tagList"></div>
+        </section>
+
+        <section class="side-section grow">
+          <div class="section-title">
+            <span data-i18n="sideRecent">最近笔记</span>
+            <button class="plain-btn" id="clearSearch" type="button" data-i18n="sideClear">清空</button>
+          </div>
+          <div class="note-list" id="noteList"></div>
+        </section>
+      </aside>
+
+      <section class="main-pane" aria-label="Editor">
+        <header class="pane-head">
+          <div>
+            <p id="viewMeta"></p>
+            <h2 id="viewTitle">写作</h2>
+          </div>
+          <div class="head-actions">
+            <button class="soft-btn" id="insertLink" type="button" data-i18n="insertLink">插入链接</button>
+            <button class="soft-btn" id="exportNote" type="button" data-i18n="exportNote">导出当前</button>
+            <button class="soft-btn" id="exportAll" type="button" data-i18n="exportAll">导出全部</button>
+            <button class="primary-btn" id="smartOrganize" type="button" data-i18n="smartOrganize">发现连接</button>
+          </div>
+        </header>
+
+        <section class="write-view" id="writeView">
+          <section class="echo-card hidden" id="echoCard"></section>
+          <div class="editor-shell">
+            <input id="noteTitle" class="title-input" type="text" maxlength="120" data-i18n-placeholder="titlePlaceholder" placeholder="给这个想法起个名字" />
+            <div class="note-meta" id="noteMeta"></div>
+            <textarea id="noteBody" class="note-editor" data-i18n-placeholder="bodyPlaceholder" placeholder="直接写。可以用 #标签，也可以输入 [[另一条笔记]] 建立连接。"></textarea>
+          </div>
+        </section>
+
+        <section class="library-view hidden" id="libraryView">
+          <div class="library-grid" id="libraryGrid"></div>
+        </section>
+
+        <section class="network-view hidden" id="networkView">
+          <div class="network-grid">
+            <section class="network-card wide">
+              <div class="section-title flat"><span data-i18n="clusterTitle">主题簇</span></div>
+              <div class="cluster-board" id="clusterBoard"></div>
+            </section>
+            <section class="network-card">
+              <div class="section-title flat"><span data-i18n="strongTitle">强连接</span></div>
+              <div class="connection-list" id="strongConnections"></div>
+            </section>
+            <section class="network-card">
+              <div class="section-title flat"><span data-i18n="orphanTitle">孤立想法</span></div>
+              <div class="connection-list" id="orphanNotes"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="review-view hidden" id="reviewView">
+          <div class="review-grid">
+            <section class="review-card hero-review" id="memoryCard"></section>
+            <section class="review-card">
+              <div class="section-title flat"><span data-i18n="reviewThemes">最近反复出现的主题</span></div>
+              <div id="themeReview" class="theme-review"></div>
+            </section>
+            <section class="review-card">
+              <div class="section-title flat"><span data-i18n="reviewConnections">建议你补上的连接</span></div>
+              <div id="connectionReview" class="connection-list"></div>
+            </section>
+            <section class="review-card">
+              <div class="section-title flat"><span data-i18n="statsTitle">回声统计</span></div>
+              <div id="echoStats" class="echo-stats"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+
+      <aside class="insight-pane" aria-label="Insights">
+        <section class="insight-card ownership">
+          <span>Local-first</span>
+          <strong data-i18n="ownershipTitle">你的知识长期属于你</strong>
+          <p data-i18n="ownershipBody">当前笔记保存在浏览器本地，可导出 Markdown。先让积累属于用户，再考虑同步、AI 和发布。</p>
+        </section>
+
+        <section class="insight-card">
+          <div class="section-title flat"><span data-i18n="relatedTitle">相关笔记</span></div>
+          <div id="relatedList" class="mini-list"></div>
+        </section>
+
+        <section class="insight-card">
+          <div class="section-title flat"><span data-i18n="backlinkTitle">反向链接</span></div>
+          <div id="backlinkList" class="mini-list"></div>
+        </section>
+
+        <section class="insight-card">
+          <div class="section-title flat"><span data-i18n="suggestionTitle">可连接的想法</span></div>
+          <div id="suggestionList" class="mini-list"></div>
+        </section>
+      </aside>
+    </main>
+
+    <div class="importer hidden" id="importer" role="dialog" aria-modal="true">
+      <div class="importer-card">
+        <button class="echo-close" type="button" id="importerClose" data-i18n-title="echoClose" title="关闭">✕</button>
+        <h2 data-i18n="importTitle">带上你的旧笔记</h2>
+        <p class="importer-sub" data-i18n="importSub">Kindle 划线、Readwise 导出或一批 Markdown——全部在你的设备上解析，不上传任何内容。</p>
+        <div class="importer-actions">
+          <button class="soft-btn" id="importKindleBtn" type="button" data-i18n="importKindle">Kindle 划线（My Clippings.txt）</button>
+          <button class="soft-btn" id="importReadwiseBtn" type="button" data-i18n="importReadwise">Readwise 导出（CSV）</button>
+          <button class="soft-btn" id="importMdBtn" type="button" data-i18n="importMd">Markdown 文件（可多选）</button>
+        </div>
+        <input type="file" id="importKindleFile" accept=".txt,text/plain" class="hidden" />
+        <input type="file" id="importReadwiseFile" accept=".csv,text/csv" class="hidden" />
+        <input type="file" id="importMdFile" accept=".md,.markdown,.txt,text/markdown" multiple class="hidden" />
+        <p class="importer-msg hidden" id="importerMsg"></p>
+        <div class="importer-echo hidden" id="importerEcho"></div>
+      </div>
+    </div>
+
+    <div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true">
+      <div class="onboarding-card">
+        <img class="onboarding-logo" src="./assets/brand-mark.svg" alt="DockEcho" width="72" height="72" />
+        <h2 data-i18n="onboardTitle">你的笔记，会自己回来找你</h2>
+        <p class="onboarding-tagline" data-i18n="onboardTagline">本地优先。你的 Markdown 文件，你的电脑，你的知识。</p>
+        <div class="onboarding-actions">
+          <button class="primary-btn" id="onboardVault" type="button" data-i18n="onboardOpenFolder">打开我的笔记文件夹</button>
+          <p class="onboarding-hint" id="onboardVaultHint" data-i18n="onboardObsidianHint">兼容 Obsidian 库——直接挂载，不迁移、不改动你的文件。</p>
+          <p class="onboarding-hint warn hidden" id="onboardUnsupported" data-i18n="folderUnsupported">文件夹模式需要桌面版 Chrome / Edge。</p>
+          <button class="soft-btn" id="onboardBrowser" type="button" data-i18n="onboardBrowser">先在浏览器里试试</button>
+          <p class="onboarding-hint" data-i18n="onboardBrowserHint">数据保存在本机浏览器，可随时导出或迁入文件夹。</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="./assets/i18n.js"></script>
+    <script src="./assets/echo.js"></script>
+    <script src="./assets/vault.js"></script>
+    <script src="./assets/import.js"></script>
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
