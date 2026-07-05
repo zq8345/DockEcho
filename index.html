@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DockTodo Pro</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <main class="app" aria-label="DockTodo Pro">
+      <aside class="rail" aria-label="主导航">
+        <div class="brand" title="DockTodo">D</div>
+        <button class="rail-btn active" type="button" data-mode="tasks" title="任务">✓</button>
+        <button class="rail-btn" type="button" data-mode="calendar" title="日历">▦</button>
+        <button class="rail-btn" type="button" data-mode="focus" title="专注">◎</button>
+        <button class="rail-btn" type="button" data-mode="stats" title="统计">▥</button>
+        <button class="rail-btn bottom" type="button" id="themeToggle" title="切换主题">◐</button>
+      </aside>
+
+      <aside class="sidebar" aria-label="清单和筛选">
+        <header class="sidebar-head">
+          <div>
+            <p>DockTodo Pro</p>
+            <h1>高级任务中心</h1>
+          </div>
+          <button class="icon-btn" id="quickAddTop" type="button" title="添加任务">+</button>
+        </header>
+
+        <nav class="nav-list" id="smartLists" aria-label="智能清单"></nav>
+
+        <section class="side-section">
+          <div class="section-title">
+            <span>清单</span>
+            <button class="plain-btn" id="addList" type="button">新建</button>
+          </div>
+          <div class="nav-list" id="projectList"></div>
+        </section>
+
+        <section class="side-section">
+          <div class="section-title">
+            <span>自定义筛选</span>
+            <button class="plain-btn" id="addFilter" type="button">新建</button>
+          </div>
+          <div class="nav-list" id="filterList"></div>
+        </section>
+      </aside>
+
+      <section class="main-pane" aria-label="主工作区">
+        <header class="pane-head">
+          <div>
+            <p id="viewMeta">今天</p>
+            <h2 id="viewTitle">今天</h2>
+          </div>
+          <div class="head-actions">
+            <button class="soft-btn" id="exportData" type="button">导出</button>
+            <button class="soft-btn" id="clearDone" type="button">清理完成</button>
+            <button class="primary-btn" id="quickAdd" type="button">添加任务</button>
+          </div>
+        </header>
+
+        <section class="task-view" id="taskView">
+          <form class="quick-form" id="taskForm">
+            <input id="taskInput" type="text" maxlength="140" autocomplete="off" placeholder="添加任务，按 Enter 保存" />
+            <input id="taskStart" type="date" title="开始日期" />
+            <input id="taskDue" type="date" title="截止日期" />
+            <select id="taskPriority" title="优先级">
+              <option value="none">无优先级</option>
+              <option value="high">高优先级</option>
+              <option value="medium">中优先级</option>
+              <option value="low">低优先级</option>
+            </select>
+            <button type="submit">保存</button>
+          </form>
+
+          <div class="stats-line" id="statsLine"></div>
+          <div class="task-list" id="taskList" aria-label="任务"></div>
+          <section class="empty" id="emptyState">
+            <strong>这里没有任务</strong>
+            <span>添加一件要推进的事，DockTodo 会帮你留住它。</span>
+          </section>
+        </section>
+
+        <section class="calendar-view hidden" id="calendarView">
+          <div class="calendar-toolbar">
+            <button class="soft-btn" id="prevMonth" type="button">上月</button>
+            <strong id="calendarTitle"></strong>
+            <button class="soft-btn" id="nextMonth" type="button">下月</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+
+        <section class="focus-view hidden" id="focusView">
+          <div class="focus-card">
+            <p>专注计时</p>
+            <strong id="focusTime">25:00</strong>
+            <select id="focusTask"></select>
+            <div class="focus-actions">
+              <button class="primary-btn" id="startFocus" type="button">开始</button>
+              <button class="soft-btn" id="resetFocus" type="button">重置</button>
+              <button class="soft-btn" id="completePomo" type="button">记 1 个番茄</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-view hidden" id="statsView"></section>
+      </section>
+
+      <aside class="detail-pane" aria-label="任务详情">
+        <div class="detail-empty" id="detailEmpty">
+          <strong>选择一个任务</strong>
+          <span>查看备注、日期、提醒、优先级、番茄和历史记录。</span>
+        </div>
+
+        <form class="detail-form hidden" id="detailForm">
+          <label class="detail-check">
+            <input id="detailCompleted" type="checkbox" />
+            <span>完成任务</span>
+          </label>
+
+          <textarea id="detailTitle" rows="2" maxlength="180" aria-label="任务标题"></textarea>
+
+          <div class="field-grid">
+            <label>
+              <span>清单</span>
+              <select id="detailList"></select>
+            </label>
+            <label>
+              <span>开始日期</span>
+              <input id="detailStart" type="date" />
+            </label>
+            <label>
+              <span>截止日期</span>
+              <input id="detailDue" type="date" />
+            </label>
+            <label>
+              <span>提醒</span>
+              <input id="detailReminder" type="datetime-local" />
+            </label>
+            <label>
+              <span>优先级</span>
+              <select id="detailPriority">
+                <option value="none">无</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+              </select>
+            </label>
+            <label>
+              <span>预计番茄</span>
+              <input id="detailEstimate" type="number" min="0" max="20" />
+            </label>
+          </div>
+
+          <label class="notes">
+            <span>备注</span>
+            <textarea id="detailNotes" rows="5" placeholder="记录背景、链接或下一步"></textarea>
+          </label>
+
+          <section class="subtasks">
+            <div class="section-title flat">
+              <span>检查项提醒</span>
+              <button class="plain-btn" id="addSubtask" type="button">添加</button>
+            </div>
+            <div id="subtaskList"></div>
+          </section>
+
+          <section class="history">
+            <div class="section-title flat">
+              <span>历史记录</span>
+            </div>
+            <div id="historyList"></div>
+          </section>
+
+          <button class="danger-btn" id="deleteTask" type="button">删除任务</button>
+        </form>
+      </aside>
+    </main>
+
+    <template id="taskTemplate">
+      <button class="task-row" type="button">
+        <span class="task-check" aria-hidden="true"></span>
+        <span class="task-main">
+          <strong></strong>
+          <small></small>
+        </span>
+        <span class="task-date"></span>
+      </button>
+    </template>
+
+    <template id="subtaskTemplate">
+      <label class="subtask-row">
+        <input class="subtask-done" type="checkbox" />
+        <input class="subtask-title" type="text" maxlength="120" />
+        <input class="subtask-reminder" type="datetime-local" title="检查项提醒" />
+        <button class="subtask-delete" type="button" title="删除检查项">×</button>
+      </label>
+    </template>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
