@@ -30,16 +30,14 @@
 
       <aside class="sidebar" aria-label="Library">
         <header class="sidebar-head">
-          <div>
-            <p>DockEcho</p>
-            <h1 data-i18n="appSubtitle">本地知识网络</h1>
-            <button class="vault-status" id="vaultStatus" type="button"></button>
-          </div>
+          <p class="sidebar-eyebrow">DockEcho</p>
           <div class="sidebar-head-btns">
             <button class="icon-btn" id="openVault" type="button" data-i18n-title="openFolder" title="打开文件夹">▤</button>
             <button class="icon-btn" id="openImport" type="button" data-i18n-title="importOpen" title="带上你的旧笔记">⇪</button>
             <button class="icon-btn" id="newNote" type="button" data-i18n-title="newNote" title="新建笔记">+</button>
           </div>
+          <h1 data-i18n="appSubtitle">本地知识网络</h1>
+          <button class="vault-status" id="vaultStatus" type="button"></button>
         </header>
 
         <div class="search-box">
@@ -80,9 +78,9 @@
 
       <section class="main-pane" aria-label="Editor">
         <header class="pane-head">
-          <div>
-            <p id="viewMeta"></p>
+          <div class="pane-title">
             <h2 id="viewTitle">写作</h2>
+            <p id="viewMeta"></p>
           </div>
           <div class="head-actions">
             <button class="soft-btn" id="insertLink" type="button" data-i18n="insertLink">插入链接</button>

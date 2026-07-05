@@ -941,6 +941,7 @@ function renderNetwork() {
 function renderReview() {
   const shown = currentEcho();
   if (shown) {
+    els.memoryCard.className = "review-card hero-review";
     els.memoryCard.innerHTML = `
       <span>${escapeHtml(t("echoTitle"))}</span>
       <strong>${t("memoryTitle", { title: escapeHtml(shown.note.title) })}</strong>
@@ -950,9 +951,11 @@ function renderReview() {
     `;
     document.querySelector("#openMemory")?.addEventListener("click", () => echoAction("open"));
   } else {
+    // Humble empty state — a quiet line, not a giant headline.
+    els.memoryCard.className = "echo-empty";
     els.memoryCard.innerHTML = `
-      <span>${escapeHtml(t("echoTitle"))}</span>
-      <strong>${escapeHtml(t("echoQuiet"))}</strong>
+      <span class="echo-empty-icon" aria-hidden="true">↺</span>
+      <p>${escapeHtml(t("echoQuiet"))}</p>
     `;
   }
 
@@ -1098,16 +1101,6 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function installGlassInteractions() {
-  const selector = "button, input, textarea";
-  document.addEventListener("pointermove", (event) => {
-    const target = event.target.closest(selector);
-    if (!target) return;
-    const rect = target.getBoundingClientRect();
-    target.style.setProperty("--spot-x", `${event.clientX - rect.left}px`);
-    target.style.setProperty("--spot-y", `${event.clientY - rect.top}px`);
-  });
-}
 
 /* ---------- importers ---------- */
 
@@ -1344,7 +1337,6 @@ function applyI18n() {
 }
 
 state.stats.firstUseAt ??= Date.now();
-installGlassInteractions();
 saveState();
 render();
 initOnboarding();
