@@ -1,6 +1,22 @@
 const STORAGE_KEY = "dockecho.local.state.v1";
 const LEGACY_STORAGE_KEYS = ["docktodo.local.state.v1", "docknote.local.state.v1"];
+const DAY_MS = 86400000;
 const todayKey = formatDate(new Date());
+
+// Session runtime. Vault-mode notes never enter localStorage: state.notes holds
+// the active working set, runtime.browserNotes preserves the browser-mode copy.
+const runtime = {
+  mode: "browser",
+  dirHandle: null,
+  vaultName: "",
+  meta: null,
+  browserNotes: null,
+  pendingHandle: null,
+  notice: "",
+  editedIds: new Set(),
+  writeTimers: new Map(),
+  metaTimer: null,
+};
 
 function buildSeedNotes() {
   const seeds = SEED_NOTES[currentLang()] ?? SEED_NOTES.en;
@@ -21,6 +37,9 @@ function buildDefaultState() {
     selectedId: "",
     theme: "light",
     lang: currentLang(),
+    onboarded: false,
+    echo: {},
+    stats: {},
     notes: buildSeedNotes(),
   };
 }
@@ -64,12 +83,21 @@ const els = {
   memoryCard: document.querySelector("#memoryCard"),
   themeReview: document.querySelector("#themeReview"),
   connectionReview: document.querySelector("#connectionReview"),
+  echoCard: document.querySelector("#echoCard"),
+  openVault: document.querySelector("#openVault"),
+  vaultStatus: document.querySelector("#vaultStatus"),
+  onboarding: document.querySelector("#onboarding"),
+  onboardVault: document.querySelector("#onboardVault"),
+  onboardBrowser: document.querySelector("#onboardBrowser"),
+  onboardUnsupported: document.querySelector("#onboardUnsupported"),
 };
 
 const savedState = loadRawState();
 setI18nLang(savedState?.lang ?? detectLang());
 let state = normalizeState(savedState ?? buildDefaultState());
 let saveTimer = null;
+let renderTimer = null;
+const echoIndex = new EchoIndex();
 
 function loadRawState() {
   try {
@@ -95,6 +123,9 @@ function normalizeState(nextState) {
   nextState.activeTag ??= "";
   nextState.theme ??= "light";
   nextState.lang = I18N[nextState.lang] ? nextState.lang : currentLang();
+  nextState.onboarded ??= true;
+  nextState.echo ??= {};
+  nextState.stats ??= {};
   nextState.notes = (nextState.notes ?? []).map((note) => ({
     id: note.id ?? createId(),
     title: note.title || t("untitled"),
@@ -111,7 +142,8 @@ function normalizeState(nextState) {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const notes = runtime.mode === "vault" ? runtime.browserNotes ?? [] : state.notes;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, notes, vaultActive: runtime.mode === "vault" }));
 }
 
 function queueSave() {
@@ -125,7 +157,7 @@ function createId() {
 }
 
 function createNote(input = {}, index = 0) {
-  const now = Date.now() - index * 86400000;
+  const now = Date.now() - index * DAY_MS;
   return {
     id: createId(),
     title: input.title || t("untitled"),
@@ -158,41 +190,31 @@ function allTags(note = null) {
 }
 
 function extractTags(text) {
-  return [...new Set((text.match(/#[\w\u4e00-\u9fa5-]+/g) ?? []).map((tag) => tag.slice(1)))];
+  return [...new Set((text.match(/#[\w一-龥-]+/g) ?? []).map((tag) => tag.slice(1)))];
 }
 
 function extractLinks(text) {
   return [...new Set([...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1].trim()).filter(Boolean))];
 }
 
-function noteWords(note) {
-  const source = `${note.title} ${note.body}`.toLowerCase();
-  const english = source.match(/[a-z0-9]{3,}/g) ?? [];
-  const known = ["产品", "知识", "笔记", "本地", "隐私", "长期", "写作", "读书", "AI", "创作", "小白", "网络", "想法", "复盘", "验证", "Notion", "Obsidian"]
-    .filter((word) => source.includes(word.toLowerCase()));
-  return [...new Set([...english, ...known, ...extractTags(source)])];
-}
-
+// TF-IDF cosine as the main score, fused with explicit-link and shared-tag boosts.
 function relatedNotes(note, limit = 5) {
   if (!note) return [];
+  echoIndex.sync(state.notes);
   const tags = new Set(extractTags(note.body));
-  const words = new Set(noteWords(note));
   const links = new Set(extractLinks(note.body));
   return state.notes
     .filter((item) => item.id !== note.id)
     .map((item) => {
-      let score = 0;
+      let score = echoIndex.similarity(note.id, item.id) * 100;
       extractTags(item.body).forEach((tag) => {
         if (tags.has(tag)) score += 5;
       });
-      noteWords(item).forEach((word) => {
-        if (words.has(word)) score += 2;
-      });
       if (links.has(item.title)) score += 10;
       if (extractLinks(item.body).includes(note.title)) score += 8;
-      return { note: item, score };
+      return { note: item, score: Math.round(score) };
     })
-    .filter((item) => item.score > 0)
+    .filter((item) => item.score >= 3)
     .sort((a, b) => b.score - a.score || b.note.updatedAt - a.note.updatedAt)
     .slice(0, limit);
 }
@@ -202,17 +224,30 @@ function backlinks(note) {
   return state.notes.filter((item) => item.id !== note.id && extractLinks(item.body).includes(note.title));
 }
 
-function unlinkedNotes() {
-  return state.notes.filter((note) => !extractLinks(note.body).length && !backlinks(note).length);
+// Single pass over the corpus instead of per-note backlink scans.
+function unlinkedNoteIds() {
+  const linkedTitles = new Set();
+  const hasOutgoing = new Set();
+  state.notes.forEach((note) => {
+    const links = extractLinks(note.body);
+    if (links.length) hasOutgoing.add(note.id);
+    links.forEach((title) => linkedTitles.add(title));
+  });
+  const ids = new Set();
+  state.notes.forEach((note) => {
+    if (!hasOutgoing.has(note.id) && !linkedTitles.has(note.title)) ids.add(note.id);
+  });
+  return ids;
 }
 
 function filteredNotes() {
   const query = state.query.trim().toLowerCase();
+  const unlinked = state.filter === "unlinked" ? unlinkedNoteIds() : null;
   return state.notes
     .filter((note) => {
       if (state.filter === "daily" && !note.daily) return false;
       if (state.filter === "pinned" && !note.pinned) return false;
-      if (state.filter === "unlinked" && !unlinkedNotes().some((item) => item.id === note.id)) return false;
+      if (unlinked && !unlinked.has(note.id)) return false;
       if (state.activeTag && !extractTags(note.body).includes(state.activeTag)) return false;
       if (!query) return true;
       return `${note.title} ${note.body} ${extractTags(note.body).join(" ")}`.toLowerCase().includes(query);
@@ -234,13 +269,26 @@ function selectNote(id) {
   els.noteBody.focus();
 }
 
-function addNote(input = {}) {
+async function addNote(input = {}) {
   const note = createNote({
     title: input.title ?? t("newIdea"),
     body: input.body ?? "",
     daily: Boolean(input.daily),
     pinned: Boolean(input.pinned),
   });
+  if (runtime.mode === "vault") {
+    try {
+      const path = await vaultCreateNote(runtime.dirHandle, note.title, note.body);
+      note.id = path;
+      note.path = path;
+      setVaultNoteMeta(note);
+    } catch (error) {
+      console.error("DockEcho vault create failed", error);
+      runtime.notice = t("vaultOpenFailed");
+      render();
+      return;
+    }
+  }
   state.notes.unshift(note);
   state.selectedId = note.id;
   state.view = "write";
@@ -265,20 +313,373 @@ function getOrCreateDailyNote() {
 function deleteNote(id) {
   const note = state.notes.find((item) => item.id === id);
   if (!note) return;
+  if (runtime.mode === "vault") {
+    if (!confirm(t("vaultDeleteConfirm", { title: note.title }))) return;
+    vaultTrashNote(runtime.dirHandle, note.path)
+      .then(() => {
+        removeNoteFromState(id);
+      })
+      .catch((error) => {
+        console.error("DockEcho vault trash failed", error);
+        runtime.notice = t("vaultOpenFailed");
+        render();
+      });
+    return;
+  }
   if (!confirm(t("deleteConfirm", { title: note.title }))) return;
+  removeNoteFromState(id);
+}
+
+function removeNoteFromState(id) {
   state.notes = state.notes.filter((item) => item.id !== id);
+  runtime.editedIds.delete(id);
+  if (runtime.mode === "vault" && runtime.meta) {
+    delete runtime.meta.notes?.[id];
+    queueMetaSave();
+  }
   if (state.selectedId === id) state.selectedId = filteredNotes()[0]?.id ?? state.notes[0]?.id ?? "";
   saveState();
   render();
 }
 
-function updateSelected(patch) {
+// contentChanged=false is for pinned/daily flips: metadata only, never a file write.
+function updateSelected(patch, contentChanged = true) {
   const note = selectedNote();
   if (!note) return;
   Object.assign(note, patch, { updatedAt: Date.now() });
+  if (runtime.mode === "vault") {
+    if (contentChanged) {
+      runtime.editedIds.add(note.id);
+      queueVaultWrite(note.id);
+    } else {
+      setVaultNoteMeta(note);
+    }
+  }
   queueSave();
+  if (contentChanged) scheduleRender();
+  else render(false);
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => render(false), 300);
+}
+
+/* ---------- vault mode ---------- */
+
+function setVaultNoteMeta(note) {
+  if (!runtime.meta) return;
+  runtime.meta.notes ??= {};
+  runtime.meta.notes[note.path] = { pinned: note.pinned, daily: note.daily, createdAt: note.createdAt };
+  queueMetaSave();
+}
+
+function queueMetaSave() {
+  if (!runtime.dirHandle || !runtime.meta) return;
+  clearTimeout(runtime.metaTimer);
+  runtime.metaTimer = setTimeout(() => {
+    vaultWriteMeta(runtime.dirHandle, runtime.meta).catch((error) => {
+      console.error("DockEcho meta write failed", error);
+    });
+  }, 600);
+}
+
+function queueVaultWrite(id) {
+  clearTimeout(runtime.writeTimers.get(id));
+  runtime.writeTimers.set(id, setTimeout(async () => {
+    runtime.writeTimers.delete(id);
+    const note = state.notes.find((item) => item.id === id);
+    if (!note || runtime.mode !== "vault") return;
+    try {
+      const newPath = await vaultWriteNote(runtime.dirHandle, note, note.path);
+      if (newPath !== note.path) renameNoteId(note, newPath);
+    } catch (error) {
+      console.error("DockEcho vault write failed", error);
+      runtime.notice = t("vaultOpenFailed");
+      renderVaultStatus();
+    }
+  }, 800));
+}
+
+function renameNoteId(note, newPath) {
+  const oldId = note.id;
+  if (runtime.meta) {
+    runtime.meta.notes ??= {};
+    if (runtime.meta.notes[oldId]) {
+      runtime.meta.notes[newPath] = runtime.meta.notes[oldId];
+      delete runtime.meta.notes[oldId];
+    }
+    const echo = runtime.meta.echo ?? {};
+    ["history", "snoozed", "dismissed"].forEach((bucket) => {
+      if (echo[bucket]?.[oldId] !== undefined) {
+        echo[bucket][newPath] = echo[bucket][oldId];
+        delete echo[bucket][oldId];
+      }
+    });
+    if (echo.lastNoteId === oldId) echo.lastNoteId = newPath;
+  }
+  note.id = newPath;
+  note.path = newPath;
+  if (state.selectedId === oldId) state.selectedId = newPath;
+  if (runtime.editedIds.delete(oldId)) runtime.editedIds.add(newPath);
+  setVaultNoteMeta(note);
+  saveState();
+}
+
+async function mountVault(handle, { askMigrate = true } = {}) {
+  if (!(await vaultEnsurePermission(handle))) return false;
+  const files = await vaultScan(handle);
+  const meta = (await vaultReadMeta(handle)) ?? { version: 1, notes: {}, echo: {}, stats: {} };
+  meta.notes ??= {};
+  meta.echo ??= {};
+  meta.stats ??= {};
+
+  const previousMode = runtime.mode;
+  const browserNotes = previousMode === "browser" ? state.notes : runtime.browserNotes ?? [];
+  const notes = files.map((file) => ({
+    id: file.path,
+    path: file.path,
+    title: file.title,
+    body: file.body,
+    pinned: Boolean(meta.notes[file.path]?.pinned),
+    daily: Boolean(meta.notes[file.path]?.daily),
+    createdAt: meta.notes[file.path]?.createdAt ?? file.lastModified,
+    updatedAt: file.lastModified,
+  }));
+
+  runtime.dirHandle = handle;
+  runtime.vaultName = handle.name || "vault";
+  runtime.meta = meta;
+  runtime.pendingHandle = null;
+  runtime.notice = "";
+  runtime.editedIds = new Set();
+
+  // Seeds from a brand-new session never migrate into a user's vault.
+  const migratable = state.onboarded ? browserNotes : [];
+  runtime.browserNotes = migratable;
+  if (askMigrate && migratable.length && confirm(t("migrateAsk", { n: migratable.length }))) {
+    for (const note of migratable) {
+      try {
+        const path = await vaultCreateNote(handle, note.title, note.body);
+        meta.notes[path] = { pinned: note.pinned, daily: note.daily, createdAt: note.createdAt };
+        notes.unshift({ ...note, id: path, path });
+      } catch (error) {
+        console.error("DockEcho migration failed for note", note.title, error);
+      }
+    }
+    runtime.browserNotes = [];
+    await vaultWriteMeta(handle, meta);
+  }
+
+  runtime.mode = "vault";
+  state.notes = notes.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+  state.selectedId = state.notes[0]?.id ?? "";
+  state.onboarded = true;
+  hideOnboarding();
+  await vaultStoreHandle(handle);
+  saveState();
+  render();
+  return true;
+}
+
+async function openVaultPicker() {
+  if (!vaultSupported()) return;
+  try {
+    const handle = await vaultPickFolder();
+    await mountVault(handle);
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    console.error("DockEcho vault open failed", error);
+    runtime.notice = t("vaultOpenFailed");
+    renderVaultStatus();
+  }
+}
+
+async function restoreVault() {
+  if (!vaultSupported()) return;
+  const handle = await vaultLoadHandle();
+  if (!handle) return;
+  const permission = await vaultQueryPermission(handle);
+  if (permission === "granted") {
+    try {
+      await mountVault(handle, { askMigrate: false });
+      return;
+    } catch (error) {
+      console.error("DockEcho vault restore failed", error);
+    }
+    runtime.notice = t("vaultRestoreFailed");
+    await vaultForgetHandle();
+    renderVaultStatus();
+    return;
+  }
+  if (permission === "prompt") {
+    // requestPermission needs a user gesture — surface a one-click resume chip.
+    runtime.pendingHandle = handle;
+    renderVaultStatus();
+    return;
+  }
+  runtime.notice = t("vaultRestoreFailed");
+  await vaultForgetHandle();
+  renderVaultStatus();
+}
+
+async function resumePendingVault() {
+  const handle = runtime.pendingHandle;
+  if (!handle) return;
+  try {
+    if (await mountVault(handle, { askMigrate: false })) return;
+  } catch (error) {
+    console.error("DockEcho vault resume failed", error);
+  }
+  runtime.pendingHandle = null;
+  runtime.notice = t("vaultRestoreFailed");
+  await vaultForgetHandle();
+  renderVaultStatus();
+}
+
+/* ---------- echo card ---------- */
+
+function echoStore() {
+  if (runtime.mode === "vault" && runtime.meta) {
+    runtime.meta.echo ??= {};
+    runtime.meta.stats ??= {};
+    return { echo: runtime.meta.echo, stats: runtime.meta.stats, save: queueMetaSave };
+  }
+  state.echo ??= {};
+  state.stats ??= {};
+  return { echo: state.echo, stats: state.stats, save: queueSave };
+}
+
+function echoContextIds() {
+  const ids = [];
+  if (state.selectedId) ids.push(state.selectedId);
+  [...state.notes]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 4)
+    .forEach((note) => {
+      if (!ids.includes(note.id)) ids.push(note.id);
+    });
+  return ids.slice(0, 4).filter((id) => state.notes.some((note) => note.id === id));
+}
+
+function currentEcho() {
+  const { echo, stats, save } = echoStore();
+  if (echo.lastDate === todayKey) {
+    if (echo.closedDate === todayKey || !echo.lastNoteId) return null;
+    const note = state.notes.find((item) => item.id === echo.lastNoteId);
+    if (!note) return null;
+    const why = buildEchoWhy(note, echo.lastTerms ?? [], echo.lastContextId);
+    return why ? { note, why } : null;
+  }
+  echoIndex.sync(state.notes);
+  const pick = pickTodayEcho({
+    notes: state.notes,
+    index: echoIndex,
+    meta: echo,
+    now: Date.now(),
+    contextIds: echoContextIds(),
+  });
+  if (!pick) return null;
+  const why = buildEchoWhy(pick.note, pick.sharedTerms, pick.bestContextId);
+  if (!why) return null; // a card without a "why" never ships
+  echo.lastDate = todayKey;
+  echo.lastNoteId = pick.note.id;
+  echo.lastTerms = pick.sharedTerms;
+  echo.lastContextId = pick.bestContextId;
+  echo.lastContextTerms = pick.contextTerms.slice(0, 12);
+  echo.closedDate = "";
+  echo.history ??= {};
+  echo.history[pick.note.id] = Date.now();
+  stats.echoShown = (stats.echoShown ?? 0) + 1;
+  save();
+  return { note: pick.note, why };
+}
+
+function buildEchoWhy(note, terms, contextId) {
+  const context = state.notes.find((item) => item.id === contextId) ?? selectedNote();
+  if (!context || context.id === note.id) return "";
+  const days = Math.max(1, Math.floor((Date.now() - note.createdAt) / DAY_MS));
+  const age = days >= 60
+    ? t("ageMonths", { n: Math.max(2, Math.round(days / 30)) })
+    : days >= 14
+      ? t("ageWeeks", { n: Math.round(days / 7) })
+      : t("ageDays", { n: days });
+  const sharedTags = extractTags(note.body).filter((tag) => extractTags(context.body).includes(tag));
+  if (sharedTags.length) {
+    return t("echoWhyTags", {
+      age,
+      current: context.title,
+      terms: sharedTags.slice(0, 2).map((tag) => `#${tag}`).join(t("listJoin")),
+    });
+  }
+  if (terms?.length) {
+    return t("echoWhyTerms", { age, current: context.title, terms: terms.slice(0, 2).join(t("listJoin")) });
+  }
+  return "";
+}
+
+function echoAction(action) {
+  const { echo, stats, save } = echoStore();
+  const note = state.notes.find((item) => item.id === echo.lastNoteId);
+  if (!note) return;
+  if (action === "open") {
+    stats.echoOpened = (stats.echoOpened ?? 0) + 1;
+    if (Date.now() - note.createdAt > 90 * DAY_MS) stats.oldEchoOpened = (stats.oldEchoOpened ?? 0) + 1;
+    save();
+    selectNote(note.id);
+    return;
+  }
+  if (action === "insert") {
+    stats.echoInserted = (stats.echoInserted ?? 0) + 1;
+    save();
+    insertTextAtCursor(`[[${note.title}]]`);
+    return;
+  }
+  if (action === "snooze") {
+    echo.snoozed ??= {};
+    echo.snoozed[note.id] = Date.now() + 7 * DAY_MS;
+    echo.closedDate = todayKey;
+    stats.echoSnoozed = (stats.echoSnoozed ?? 0) + 1;
+  } else if (action === "dismiss") {
+    echo.dismissed ??= {};
+    const contexts = echo.dismissed[note.id] ?? [];
+    contexts.push(echo.lastContextTerms ?? []);
+    echo.dismissed[note.id] = contexts.slice(-5);
+    echo.closedDate = todayKey;
+    stats.echoDismissed = (stats.echoDismissed ?? 0) + 1;
+  } else if (action === "close") {
+    echo.closedDate = todayKey;
+  }
+  save();
   render(false);
 }
+
+function renderEchoCard() {
+  const shown = currentEcho();
+  els.echoCard.classList.toggle("hidden", !shown);
+  if (!shown) {
+    els.echoCard.replaceChildren();
+    return;
+  }
+  els.echoCard.innerHTML = `
+    <button class="echo-close" type="button" data-echo="close" title="${escapeHtml(t("echoClose"))}">✕</button>
+    <span class="echo-tag">${escapeHtml(t("echoTitle"))}</span>
+    <strong>${escapeHtml(shown.note.title)}</strong>
+    <p class="echo-why">${escapeHtml(shown.why)}</p>
+    <p class="echo-snippet">${escapeHtml(snippet(shown.note.body, 160))}</p>
+    <div class="echo-actions">
+      <button class="primary-btn" type="button" data-echo="open">${escapeHtml(t("echoOpen"))}</button>
+      <button class="soft-btn" type="button" data-echo="insert">${escapeHtml(t("echoInsert"))}</button>
+      <button class="soft-btn" type="button" data-echo="snooze">${escapeHtml(t("echoSnooze"))}</button>
+      <button class="soft-btn" type="button" data-echo="dismiss">${escapeHtml(t("echoDismiss"))}</button>
+    </div>
+  `;
+  els.echoCard.querySelectorAll("[data-echo]").forEach((button) => {
+    button.addEventListener("click", () => echoAction(button.dataset.echo));
+  });
+}
+
+/* ---------- rendering ---------- */
 
 function render(syncEditor = true) {
   setI18nLang(state.lang);
@@ -286,6 +687,7 @@ function render(syncEditor = true) {
   renderTheme();
   renderShell();
   renderSidebar();
+  renderVaultStatus();
   renderViews(syncEditor);
   renderInsights();
 }
@@ -312,21 +714,44 @@ function renderShell() {
   els.reviewView.classList.toggle("hidden", state.view !== "review");
 }
 
+function renderVaultStatus() {
+  const el = els.vaultStatus;
+  els.openVault.classList.toggle("hidden", !vaultSupported());
+  el.classList.remove("active", "action", "warn");
+  if (runtime.notice) {
+    el.textContent = runtime.notice;
+    el.classList.add("warn");
+    return;
+  }
+  if (runtime.mode === "vault") {
+    el.textContent = t("modeFolder", { name: runtime.vaultName });
+    el.classList.add("active");
+    return;
+  }
+  if (runtime.pendingHandle) {
+    el.textContent = t("vaultResume", { name: runtime.pendingHandle.name || "vault" });
+    el.classList.add("action");
+    return;
+  }
+  el.textContent = t("modeBrowser");
+}
+
 function renderSidebar() {
   els.searchInput.value = state.query;
+  const unlinked = unlinkedNoteIds();
   els.countAll.textContent = state.notes.length;
   els.countDaily.textContent = state.notes.filter((note) => note.daily).length;
   els.countPinned.textContent = state.notes.filter((note) => note.pinned).length;
-  els.countUnlinked.textContent = unlinkedNotes().length;
+  els.countUnlinked.textContent = unlinked.size;
   els.navItems.forEach((item) => item.classList.toggle("active", item.dataset.filter === state.filter && !state.activeTag));
 
   els.tagList.replaceChildren();
-  allTags().forEach(([tag, count]) => {
+  allTags().slice(0, 30).forEach(([tag, count]) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "tag-pill";
     button.classList.toggle("active", state.activeTag === tag);
-    button.innerHTML = `<span>#${tag}</span><small>${count}</small>`;
+    button.innerHTML = `<span>#${escapeHtml(tag)}</span><small>${count}</small>`;
     button.addEventListener("click", () => {
       state.activeTag = state.activeTag === tag ? "" : tag;
       state.filter = "all";
@@ -337,7 +762,8 @@ function renderSidebar() {
   });
 
   els.noteList.replaceChildren();
-  filteredNotes().forEach((note) => els.noteList.append(noteButton(note)));
+  // The sidebar is a recency list — cap DOM nodes so typing stays fluid at 1000+ notes.
+  filteredNotes().slice(0, 120).forEach((note) => els.noteList.append(noteButton(note)));
 }
 
 function noteButton(note) {
@@ -349,7 +775,7 @@ function noteButton(note) {
   button.innerHTML = `
     <strong>${escapeHtml(note.title)}</strong>
     <span>${escapeHtml(snippet(note.body, 72))}</span>
-    <small>${note.pinned ? "★ " : ""}${tags || t("untagged")} · ${timeAgo(note.updatedAt)}</small>
+    <small>${note.pinned ? "★ " : ""}${escapeHtml(tags) || t("untagged")} · ${timeAgo(note.updatedAt)}</small>
   `;
   button.addEventListener("click", () => selectNote(note.id));
   return button;
@@ -366,9 +792,11 @@ function renderViews(syncEditor) {
     els.noteBody.value = "";
   }
   renderMeta(note);
-  renderLibrary();
-  renderNetwork();
-  renderReview();
+  // Only the active view pays rendering cost.
+  if (state.view === "write") renderEchoCard();
+  if (state.view === "library") renderLibrary();
+  if (state.view === "network") renderNetwork();
+  if (state.view === "review") renderReview();
 }
 
 function renderMeta(note) {
@@ -381,10 +809,10 @@ function renderMeta(note) {
     <button class="meta-chip" type="button" id="pinToggle">${note.pinned ? t("pinned") : t("pin")}</button>
     <button class="meta-chip danger" type="button" id="deleteNote">${t("delete")}</button>
     <span>${t("chars", { count: note.body.length })}</span>
-    <span>${tags.length ? tags.map((tag) => `#${tag}`).join(" ") : t("noTags")}</span>
+    <span>${tags.length ? tags.map((tag) => `#${escapeHtml(tag)}`).join(" ") : t("noTags")}</span>
     <span>${new Date(note.updatedAt).toLocaleString(t("dateLocale"))}</span>
   `;
-  document.querySelector("#pinToggle")?.addEventListener("click", () => updateSelected({ pinned: !note.pinned }));
+  document.querySelector("#pinToggle")?.addEventListener("click", () => updateSelected({ pinned: !note.pinned }, false));
   document.querySelector("#deleteNote")?.addEventListener("click", () => deleteNote(note.id));
 }
 
@@ -397,7 +825,7 @@ function renderLibrary() {
     card.innerHTML = `
       <strong>${escapeHtml(note.title)}</strong>
       <p>${escapeHtml(snippet(note.body, 150))}</p>
-      <span>${extractTags(note.body).map((tag) => `#${tag}`).join(" ") || t("untagged")}</span>
+      <span>${extractTags(note.body).map((tag) => `#${escapeHtml(tag)}`).join(" ") || t("untagged")}</span>
     `;
     card.addEventListener("click", () => selectNote(note.id));
     els.libraryGrid.append(card);
@@ -407,7 +835,7 @@ function renderLibrary() {
 function renderInsights() {
   const note = selectedNote();
   renderMiniList(els.relatedList, relatedNotes(note), t("emptyRelated"));
-  renderPlainNotes(els.backlinkList, backlinks(note), t("emptyBacklinks"));
+  renderMiniList(els.backlinkList, backlinks(note), t("emptyBacklinks"));
   renderSuggestions(note);
 }
 
@@ -426,10 +854,6 @@ function renderMiniList(container, items, emptyText) {
     button.addEventListener("click", () => selectNote(note.id));
     container.append(button);
   });
-}
-
-function renderPlainNotes(container, notes, emptyText) {
-  renderMiniList(container, notes, emptyText);
 }
 
 function renderSuggestions(note) {
@@ -457,14 +881,14 @@ function renderNetwork() {
   if (!clusters.length) {
     els.clusterBoard.innerHTML = `<div class="empty-mini">${t("emptyClusters")}</div>`;
   }
-  clusters.forEach(([tag, count]) => {
+  clusters.slice(0, 24).forEach(([tag, count]) => {
     const notes = state.notes.filter((note) => extractTags(note.body).includes(tag));
     const card = document.createElement("section");
     card.className = "cluster-card";
     card.innerHTML = `
       <strong>#${escapeHtml(tag)}</strong>
       <span>${t("noteCount", { n: count })}</span>
-      <p>${notes.slice(0, 3).map((note) => note.title).join(" · ")}</p>
+      <p>${escapeHtml(notes.slice(0, 3).map((note) => note.title).join(" · "))}</p>
     `;
     card.addEventListener("click", () => {
       state.activeTag = tag;
@@ -476,7 +900,9 @@ function renderNetwork() {
     els.clusterBoard.append(card);
   });
 
-  const connections = state.notes
+  // Pairwise scan is O(N²) — cap to the most recent notes so the view opens fast.
+  const recent = [...state.notes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 150);
+  const connections = recent
     .map((note) => ({ note, related: relatedNotes(note, 3) }))
     .filter((item) => item.related.length)
     .sort((a, b) => b.related.length - a.related.length)
@@ -486,14 +912,15 @@ function renderNetwork() {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "connection-row";
-    row.innerHTML = `<strong>${escapeHtml(item.note.title)}</strong><span>${item.related.map((rel) => rel.note.title).join(" · ")}</span>`;
+    row.innerHTML = `<strong>${escapeHtml(item.note.title)}</strong><span>${escapeHtml(item.related.map((rel) => rel.note.title).join(" · "))}</span>`;
     row.addEventListener("click", () => selectNote(item.note.id));
     els.strongConnections.append(row);
   });
   if (!connections.length) els.strongConnections.innerHTML = `<div class="empty-mini">${t("emptyConnections")}</div>`;
 
   els.orphanNotes.replaceChildren();
-  unlinkedNotes().forEach((note) => {
+  const unlinked = unlinkedNoteIds();
+  state.notes.filter((note) => unlinked.has(note.id)).slice(0, 12).forEach((note) => {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "connection-row";
@@ -501,21 +928,25 @@ function renderNetwork() {
     row.addEventListener("click", () => selectNote(note.id));
     els.orphanNotes.append(row);
   });
-  if (!unlinkedNotes().length) els.orphanNotes.innerHTML = `<div class="empty-mini">${t("noOrphans")}</div>`;
+  if (!unlinked.size) els.orphanNotes.innerHTML = `<div class="empty-mini">${t("noOrphans")}</div>`;
 }
 
 function renderReview() {
-  const resurfaced = state.notes
-    .filter((note) => note.id !== state.selectedId)
-    .sort((a, b) => a.updatedAt - b.updatedAt)[0];
-  if (resurfaced) {
+  const shown = currentEcho();
+  if (shown) {
     els.memoryCard.innerHTML = `
-      <span>${t("memoryTag")}</span>
-      <strong>${t("memoryTitle", { title: escapeHtml(resurfaced.title) })}</strong>
-      <p>${escapeHtml(snippet(resurfaced.body, 180))}</p>
+      <span>${escapeHtml(t("echoTitle"))}</span>
+      <strong>${t("memoryTitle", { title: escapeHtml(shown.note.title) })}</strong>
+      <p class="echo-why">${escapeHtml(shown.why)}</p>
+      <p>${escapeHtml(snippet(shown.note.body, 180))}</p>
       <button class="primary-btn" type="button" id="openMemory">${t("memoryOpen")}</button>
     `;
-    document.querySelector("#openMemory")?.addEventListener("click", () => selectNote(resurfaced.id));
+    document.querySelector("#openMemory")?.addEventListener("click", () => echoAction("open"));
+  } else {
+    els.memoryCard.innerHTML = `
+      <span>${escapeHtml(t("echoTitle"))}</span>
+      <strong>${escapeHtml(t("echoQuiet"))}</strong>
+    `;
   }
 
   els.themeReview.replaceChildren();
@@ -529,7 +960,8 @@ function renderReview() {
 
   els.connectionReview.replaceChildren();
   const note = selectedNote();
-  relatedNotes(note, 5).forEach((item) => {
+  const related = relatedNotes(note, 5);
+  related.forEach((item) => {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "connection-row";
@@ -537,8 +969,10 @@ function renderReview() {
     row.addEventListener("click", () => insertTextAtCursor(`[[${item.note.title}]]`));
     els.connectionReview.append(row);
   });
-  if (!relatedNotes(note, 5).length) els.connectionReview.innerHTML = `<div class="empty-mini">${t("emptyReviewLinks")}</div>`;
+  if (!related.length) els.connectionReview.innerHTML = `<div class="empty-mini">${t("emptyReviewLinks")}</div>`;
 }
+
+/* ---------- misc actions ---------- */
 
 function smartOrganizeNote() {
   const note = selectedNote();
@@ -552,6 +986,10 @@ function smartOrganizeNote() {
   if (!additions.length) additions.push(`\n\n${t("organizeDone")}`);
   note.body = `${note.body.trim()}${additions.join("")}`;
   note.updatedAt = Date.now();
+  if (runtime.mode === "vault") {
+    runtime.editedIds.add(note.id);
+    queueVaultWrite(note.id);
+  }
   saveState();
   render();
 }
@@ -646,6 +1084,23 @@ function installGlassInteractions() {
   });
 }
 
+/* ---------- onboarding ---------- */
+
+function initOnboarding() {
+  if (state.onboarded) return;
+  const supported = vaultSupported();
+  els.onboardVault.classList.toggle("hidden", !supported);
+  document.querySelector("#onboardVaultHint")?.classList.toggle("hidden", !supported);
+  els.onboardUnsupported.classList.toggle("hidden", supported);
+  els.onboarding.classList.remove("hidden");
+}
+
+function hideOnboarding() {
+  els.onboarding.classList.add("hidden");
+}
+
+/* ---------- events & boot ---------- */
+
 els.railButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
 els.navItems.forEach((item) => item.addEventListener("click", () => {
   state.filter = item.dataset.filter;
@@ -657,7 +1112,7 @@ els.navItems.forEach((item) => item.addEventListener("click", () => {
 els.searchInput.addEventListener("input", () => {
   state.query = els.searchInput.value;
   queueSave();
-  render();
+  scheduleRender();
 });
 els.clearSearch.addEventListener("click", () => {
   state.query = "";
@@ -688,6 +1143,19 @@ els.langToggle.addEventListener("click", () => {
   saveState();
   render();
 });
+els.openVault.addEventListener("click", openVaultPicker);
+els.vaultStatus.addEventListener("click", () => {
+  if (runtime.pendingHandle) resumePendingVault();
+});
+els.onboardVault.addEventListener("click", async () => {
+  await openVaultPicker();
+});
+els.onboardBrowser.addEventListener("click", () => {
+  state.onboarded = true;
+  hideOnboarding();
+  saveState();
+  render();
+});
 
 function applyI18n() {
   applyStaticI18n();
@@ -697,3 +1165,5 @@ function applyI18n() {
 installGlassInteractions();
 saveState();
 render();
+initOnboarding();
+restoreVault();

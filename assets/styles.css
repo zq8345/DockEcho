@@ -572,6 +572,177 @@ body.theme-dark .note-editor {
   color: var(--red);
 }
 
+.sidebar-head-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.vault-status {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: default;
+}
+
+.vault-status.active {
+  color: var(--green);
+}
+
+.vault-status.action {
+  color: var(--blue);
+  cursor: pointer;
+}
+
+.vault-status.warn {
+  color: var(--amber);
+}
+
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(18, 28, 44, 0.42);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.onboarding.hidden {
+  display: none;
+}
+
+.onboarding-card {
+  width: min(430px, 100%);
+  padding: 34px 32px 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.onboarding-logo {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 14px;
+}
+
+.onboarding-card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-tagline {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.onboarding-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-actions .primary-btn,
+.onboarding-actions .soft-btn {
+  width: 100%;
+  min-height: 42px;
+}
+
+.onboarding-hint {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.onboarding-hint.warn {
+  color: var(--amber);
+}
+
+.onboarding-hint.hidden {
+  display: none;
+}
+
+.echo-card {
+  position: relative;
+  margin-bottom: 14px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(142, 140, 246, 0.12)),
+    var(--glass-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.echo-card.hidden {
+  display: none;
+}
+
+.echo-card .echo-tag {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.echo-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.echo-why {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.echo-snippet {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.echo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.echo-actions .soft-btn,
+.echo-actions .primary-btn {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.echo-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
 .note-editor {
   min-height: 0;
   padding: 16px 4px;
