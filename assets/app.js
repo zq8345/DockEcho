@@ -97,6 +97,11 @@ const els = {
   importFile: document.querySelector("#importFile"),
   openVault: document.querySelector("#openVault"),
   vaultStatus: document.querySelector("#vaultStatus"),
+  settingsBtn: document.querySelector("#settingsBtn"),
+  settings: document.querySelector("#settings"),
+  settingsClose: document.querySelector("#settingsClose"),
+  semanticSwitch: document.querySelector("#semanticSwitch"),
+  semanticStatus: document.querySelector("#semanticStatus"),
   onboarding: document.querySelector("#onboarding"),
   onboardVault: document.querySelector("#onboardVault"),
   onboardBrowser: document.querySelector("#onboardBrowser"),
@@ -138,6 +143,7 @@ function normalizeState(nextState) {
   nextState.echo ??= {};
   nextState.stats ??= {};
   nextState.insightOpen = Boolean(nextState.insightOpen);
+  nextState.semantic = Boolean(nextState.semantic);
   nextState.notes = (nextState.notes ?? []).map((note) => ({
     id: note.id ?? createId(),
     title: note.title || t("untitled"),
@@ -218,10 +224,14 @@ function relatedNotes(note, limit = 5) {
   // Notes the user marked "not relevant" get their score gently downweighted —
   // negative feedback should actually count, without erasing them entirely.
   const dismissed = new Set(Object.keys(echoStore().echo.dismissed ?? {}));
+  const useSemantic = typeof semanticReady === "function" && semanticReady();
   return state.notes
     .filter((item) => item.id !== note.id)
     .map((item) => {
-      let score = echoIndex.similarity(note.id, item.id) * 100;
+      // Semantic cosine is the main signal when the on-device model is ready;
+      // TF-IDF is the fallback. Explicit-link and shared-tag boosts stay in both.
+      const sem = useSemantic ? semanticSimilarity(note.id, item.id) : null;
+      let score = (sem !== null ? sem : echoIndex.similarity(note.id, item.id)) * 100;
       extractTags(item.body).forEach((tag) => {
         if (tags.has(tag)) score += 5;
       });
@@ -1326,6 +1336,42 @@ function hideOnboarding() {
   els.onboarding.classList.add("hidden");
 }
 
+/* ---------- settings: opt-in semantic echoes (experimental) ---------- */
+
+function openSettings() {
+  renderSemanticStatus();
+  els.settings.classList.remove("hidden");
+}
+
+function closeSettings() {
+  els.settings.classList.add("hidden");
+}
+
+function renderSemanticStatus() {
+  const on = Boolean(state.semantic);
+  els.semanticSwitch.classList.toggle("on", on);
+  els.semanticSwitch.setAttribute("aria-checked", String(on));
+  const status = typeof semanticState === "function" ? semanticState() : "off";
+  const key = { loading: "semanticLoading", ready: "semanticReady", failed: "semanticFailed", off: "semanticOff" }[status] ?? "semanticOff";
+  els.semanticStatus.textContent = t(key);
+  els.semanticStatus.classList.toggle("warn", status === "failed");
+}
+
+// The only place the semantic layer is ever switched on. When it flips to ready,
+// re-render so related notes pick up the semantic scores.
+async function applySemantic() {
+  if (typeof semanticEnable !== "function") return;
+  if (state.semantic) {
+    await semanticEnable(state.notes, () => {
+      renderSemanticStatus();
+      if (semanticState() === "ready") render(false);
+    });
+  } else {
+    semanticDisable();
+  }
+  renderSemanticStatus();
+}
+
 /* ---------- events & boot ---------- */
 
 els.railButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
@@ -1384,6 +1430,13 @@ els.insightClose.addEventListener("click", () => {
   saveState();
   render(false);
 });
+els.settingsBtn.addEventListener("click", openSettings);
+els.settingsClose.addEventListener("click", closeSettings);
+els.semanticSwitch.addEventListener("click", () => {
+  state.semantic = !state.semantic;
+  saveState();
+  applySemantic();
+});
 els.openImport.addEventListener("click", openImporter);
 els.importerClose.addEventListener("click", closeImporter);
 els.importDrop.addEventListener("click", () => els.importFile.click());
@@ -1423,3 +1476,4 @@ saveState();
 render();
 initOnboarding();
 restoreVault();
+if (state.semantic) applySemantic(); // opt-in; re-loads the model lazily

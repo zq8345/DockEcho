@@ -24,7 +24,8 @@
         <button class="rail-btn" type="button" data-view="library" data-i18n-title="railLibrary" title="笔记库">☰</button>
         <button class="rail-btn" type="button" data-view="network" data-i18n-title="railNetwork" title="知识网络">◎</button>
         <button class="rail-btn" type="button" data-view="review" data-i18n-title="railReview" title="知识回流">↺</button>
-        <button class="rail-btn bottom" type="button" id="langToggle" data-i18n-title="railLang" title="Switch language">EN</button>
+        <button class="rail-btn bottom" type="button" id="settingsBtn" data-i18n-title="settingsTitle" title="设置">⚙</button>
+        <button class="rail-btn" type="button" id="langToggle" data-i18n-title="railLang" title="Switch language">EN</button>
         <button class="rail-btn" type="button" id="themeToggle" data-i18n-title="railTheme" title="切换主题">◐</button>
       </aside>
 
@@ -185,6 +186,22 @@
       </div>
     </div>
 
+    <div class="settings hidden" id="settings" role="dialog" aria-modal="true">
+      <div class="settings-card">
+        <button class="echo-close" type="button" id="settingsClose" data-i18n-title="echoClose" title="关闭">✕</button>
+        <h2 data-i18n="settingsTitle">设置</h2>
+        <section class="settings-row">
+          <div class="settings-label">
+            <strong><span data-i18n="semanticTitle">语义回声</span><span class="settings-tag" data-i18n="semanticExperimental">实验性</span></strong>
+            <p data-i18n="semanticDesc">用更懂含义的本地模型替代关键词匹配，跨语言也能认出相近的想法。</p>
+            <p class="settings-privacy" data-i18n="semanticPrivacy">下载的是模型，上传的是零。推理全在你的设备上完成。</p>
+            <p class="settings-status" id="semanticStatus"></p>
+          </div>
+          <button class="switch" id="semanticSwitch" type="button" role="switch" aria-checked="false"><span class="switch-knob"></span></button>
+        </section>
+      </div>
+    </div>
+
     <div class="onboarding hidden" id="onboarding" role="dialog" aria-modal="true">
       <div class="onboarding-card">
         <img class="onboarding-logo" src="./assets/brand-mark.svg" alt="DockEcho" width="72" height="72" />
@@ -205,6 +222,7 @@
     <script src="./assets/vault.js"></script>
     <script src="./assets/import.js"></script>
     <script src="./assets/migrate.js"></script>
+    <script src="./assets/semantic.js"></script>
     <script src="./assets/app.js"></script>
   </body>
 </html>
