@@ -2,3 +2,8 @@
 HANDOFF*.md
 NIGHT-*.md
 *-ORDER.md
+
+# Semantic model weights are hosted on models.dockecho.com (Cloudflare R2), not in
+# the repo: the quantized ONNX is >100MB and would blow GitHub's hard file limit.
+# The transformers.js runtime + ort-wasm under vendor/ ARE committed (small, pinned).
+models/

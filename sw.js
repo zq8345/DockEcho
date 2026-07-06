@@ -6,7 +6,7 @@
 // the HF/jsDelivr CDNs) may be cache-first. It also receives shared text via the
 // Web Share Target and stashes it for the app to turn into a note.
 
-const CACHE = "dockecho-shell-v2";
+const CACHE = "dockecho-shell-v3";
 const SHARE_KEY = "/__dockecho_share__";
 
 self.addEventListener("install", (event) => {
@@ -19,8 +19,18 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Large, immutable model + runtime assets are cache-first (opposite of the shell's
+// network-first anti-stale rule): our own R2 model subdomain, and the self-hosted
+// transformers.js runtime + ort-wasm + any local weights under /vendor/ and /models/.
+// Without this, once semantic loads from our own domain the network-first shell rule
+// would re-download the ~112MB model on every visit and break offline.
+// The CDN hosts stay listed for the pre-R2 transition; they become dead once
+// env.remoteHost points at models.dockecho.com.
 function isModelAsset(url) {
-  return /cdn\.jsdelivr\.net|huggingface\.co|hf\.co/.test(url);
+  if (url.hostname === "models.dockecho.com") return true;
+  if (/cdn\.jsdelivr\.net|huggingface\.co|hf\.co/.test(url.hostname)) return true;
+  if (url.origin === self.location.origin && /^\/(vendor|models)\//.test(url.pathname)) return true;
+  return false;
 }
 
 self.addEventListener("fetch", (event) => {
@@ -36,9 +46,14 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
 
-  // The app reads the stashed share payload from this virtual URL.
+  // The app reads the stashed share payload from this virtual URL. Consume-once:
+  // delete after serving so a manual re-visit to ?shared=1 can't re-create the note.
   if (url.pathname.endsWith(SHARE_KEY)) {
-    event.respondWith(caches.open(CACHE).then((c) => c.match(SHARE_KEY).then((r) => r ?? new Response("null", { headers: { "Content-Type": "application/json" } }))));
+    event.respondWith(caches.open(CACHE).then(async (c) => {
+      const hit = await c.match(SHARE_KEY);
+      if (hit) await c.delete(SHARE_KEY);
+      return hit ?? new Response("null", { headers: { "Content-Type": "application/json" } });
+    }));
     return;
   }
 

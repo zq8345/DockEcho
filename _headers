@@ -3,3 +3,28 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()
+
+# The self-hosted ort-wasm backend must be served with correct MIME: with the
+# global nosniff above, the browser refuses to import the .mjs loader as a module
+# (and to stream the .wasm) unless the Content-Type is explicit.
+/vendor/transformers/wasm/ort-wasm-simd-threaded.jsep.mjs
+  Content-Type: text/javascript; charset=utf-8
+/vendor/transformers/wasm/ort-wasm-simd-threaded.jsep.wasm
+  Content-Type: application/wasm
+
+# ---------------------------------------------------------------------------
+# STRICT CSP — PREPARED, NOT YET LIVE (Round 5c, phase B).
+# Do NOT uncomment until the model is served from models.dockecho.com (R2):
+# with connect-src 'self' the current Hugging Face model download is blocked
+# and semantic echoes break. Ship this in the SAME commit that flips
+# SEMANTIC_MODEL_HOST to "https://models.dockecho.com" in assets/semantic.js,
+# then walk every page/overlay/import/export/waitlist-submit for zero violations.
+#
+# 'wasm-unsafe-eval' is required by the ort-wasm backend (do NOT widen to
+# 'unsafe-eval'). 'unsafe-inline' in style-src covers current inline style
+# attributes; drop it if those are cleaned up. JSON-LD (application/ld+json) is
+# data, not script, so it is unaffected.
+#
+# /*
+#   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://models.dockecho.com; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+# ---------------------------------------------------------------------------

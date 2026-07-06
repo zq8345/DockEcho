@@ -1,16 +1,25 @@
 // Semantic echoes v0 — opt-in, on-device. EXPERIMENTAL.
 //
 // Hard rules (all enforced here):
-// - Loads nothing third-party until the user turns it on. This file is first-party
-//   and zero-dependency; transformers.js is dynamically imported from a CDN only
-//   inside semanticEnable().
+// - Loads nothing until the user turns it on. The transformers.js runtime and its
+//   ort-wasm backend are self-hosted under /vendor/ (same-origin, no third-party
+//   CDN); they are imported lazily only inside semanticEnable().
 // - Note content never leaves the device: the only network request is downloading
 //   the model weights. Inference is local (WASM/WebGPU via transformers.js).
 // - Embeddings are a rebuildable cache in IndexedDB — deleting them loses nothing.
 // - Any failure degrades to TF-IDF; never throws into the caller.
 
 const SEMANTIC_MODEL = "Xenova/paraphrase-multilingual-MiniLM-L12-v2"; // zh + en
-const SEMANTIC_CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3";
+// Self-hosted, version-pinned runtime + wasm (see vendor/transformers/README.md).
+const SEMANTIC_RUNTIME = "/vendor/transformers/transformers.min.js";
+const SEMANTIC_WASM_PATH = "/vendor/transformers/wasm/";
+// Model weights host. The quantized ONNX is >100MB so it can't live in the repo;
+// it's served from our own Cloudflare R2 subdomain, which mirrors Hugging Face's
+// file layout ({host}/{model}/onnx/model_quantized.onnx, etc). Left null until that
+// subdomain + CORS are live: then transformers.js falls back to its default (HF)
+// host so the opt-in feature still works. Flip to "https://models.dockecho.com"
+// in lockstep with shipping the strict CSP (connect-src 'self' that host).
+const SEMANTIC_MODEL_HOST = null;
 const SEMANTIC_IDB = "dockecho.semantic.v1";
 const SEMANTIC_STORE = "vectors";
 const SEMANTIC_ENABLE_TIMEOUT = 180000; // first uncached download of the ~30MB model can be slow
@@ -169,8 +178,22 @@ async function semanticEnable(notes, onStatus) {
   semanticSetStatus("loading");
   try {
     const load = (async () => {
-      const mod = await import(/* @vite-ignore */ SEMANTIC_CDN);
-      if (mod.env?.allowLocalModels !== undefined) mod.env.allowLocalModels = false;
+      const mod = await import(/* @vite-ignore */ SEMANTIC_RUNTIME);
+      const env = mod.env;
+      if (env) {
+        // No model files are bundled with the site; weights come over the network.
+        env.allowLocalModels = false;
+        // ort-wasm is self-hosted same-origin — never let it reach for a CDN.
+        if (env.backends?.onnx?.wasm) env.backends.onnx.wasm.wasmPaths = SEMANTIC_WASM_PATH;
+        if (SEMANTIC_MODEL_HOST) {
+          // Serve weights from our own R2 subdomain. remotePathTemplate "{model}"
+          // drops HF's "/resolve/{revision}/" segment so ids resolve to a plain
+          // static layout: {host}/{model}/onnx/model_quantized.onnx, etc.
+          env.allowRemoteModels = true;
+          env.remoteHost = SEMANTIC_MODEL_HOST;
+          env.remotePathTemplate = "{model}";
+        }
+      }
       // q8 quantized weights keep the download small (~30MB) and run on WASM.
       semantic.extractor = await mod.pipeline("feature-extraction", SEMANTIC_MODEL, { dtype: "q8" });
     })();
