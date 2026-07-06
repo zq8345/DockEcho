@@ -15,11 +15,11 @@ const SEMANTIC_RUNTIME = "/vendor/transformers/transformers.min.js";
 const SEMANTIC_WASM_PATH = "/vendor/transformers/wasm/";
 // Model weights host. The quantized ONNX is >100MB so it can't live in the repo;
 // it's served from our own Cloudflare R2 subdomain, which mirrors Hugging Face's
-// file layout ({host}/{model}/onnx/model_quantized.onnx, etc). Left null until that
-// subdomain + CORS are live: then transformers.js falls back to its default (HF)
-// host so the opt-in feature still works. Flip to "https://models.dockecho.com"
-// in lockstep with shipping the strict CSP (connect-src 'self' that host).
-const SEMANTIC_MODEL_HOST = null;
+// file layout: transformers.js resolves {host}/{model}/config.json and
+// {host}/{model}/onnx/model_quantized.onnx via remotePathTemplate "{model}". This
+// is the ONLY external origin the feature touches — the runtime and ort-wasm are
+// same-origin under /vendor/ — and it is pinned by the strict CSP's connect-src.
+const SEMANTIC_MODEL_HOST = "https://models.dockecho.com";
 const SEMANTIC_IDB = "dockecho.semantic.v1";
 const SEMANTIC_STORE = "vectors";
 const SEMANTIC_ENABLE_TIMEOUT = 180000; // first uncached download of the ~30MB model can be slow
