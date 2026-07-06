@@ -1,0 +1,2 @@
+# Vendored ort-wasm binary — never apply text/EOL normalization, or it corrupts.
+*.wasm binary
