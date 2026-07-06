@@ -228,6 +228,8 @@ const I18N = {
 
     clogTitle: "更新记录",
     clogIntro: "DockEcho 的每一步公开可见。以下是最近让你的想法更容易回来的变化。",
+    clogDesignT: "更安静统一的界面",
+    clogDesignB: "全站字体、字号、颜色与图标重新统一——一套克制的排版、一套线条图标，让内容前突、界面退后。",
     clogSemanticT: "语义回声（实验性）",
     clogSemanticB: "回声现在读得懂含义，甚至能跨语言认出你在说同一个想法——用中文和英文写下的同一件事，也能连起来。",
     clogOnThisDayT: "「N 年前的今天」",
@@ -492,6 +494,8 @@ const I18N = {
 
     clogTitle: "Changelog",
     clogIntro: "DockEcho is built in the open. Here are the recent changes that make your ideas easier to get back.",
+    clogDesignT: "A calmer, more consistent interface",
+    clogDesignB: "Typography, sizing, color, and icons are unified across the whole app — one restrained type system, one line-icon set, so the content leads and the interface recedes.",
     clogSemanticT: "Semantic echoes (experimental)",
     clogSemanticB: "Echoes now understand meaning — and even recognize the same idea across languages, so a thought you wrote in English and in Chinese can connect.",
     clogOnThisDayT: "“N years ago today”",

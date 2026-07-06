@@ -1,52 +1,66 @@
-/* DockEcho app — quiet visual system.
-   One accent (blue), a six-step type scale, hairline borders, whitespace as the
-   primary material. Surfaces are solid paper; no gradients, no hover spotlights. */
+/* DockEcho app -- design system unified on the Bear reference (bear.app).
+   Every font-size / weight / color / radius here traces to the Bear token table
+   (round 6). Brand exceptions: accent is our blue (Bear uses red) and the rail
+   logo stays our dock-echo mark. */
 
 :root {
   color-scheme: light;
-  --bg: #f7f8fa;
-  --surface: #ffffff;
+  /* surfaces: rail (darkest warm gray) -> sidebar -> editor (white) */
+  --bg: #efefed;
+  --rail-bg: #efefed;
+  --sidebar-bg: #f5f5f4;
+  --surface: #f5f5f4;
   --card: #ffffff;
-  --card-sunk: #f2f3f6;
-  --text: #1a1d24;
-  --muted: #6b7280;
-  --faint: #9aa1ac;
+  --card-sunk: #ececea;
+  --text: #3e3e3e;
+  --muted: #8a8a88;
+  --faint: #8a8a88;
   --blue: #0a84ff;
-  --blue-ink: #0a6ed6;
-  --blue-wash: rgba(10, 132, 255, 0.08);
-  --red: #e5484d;
-  --hairline: rgba(20, 24, 34, 0.09);
-  --hairline-strong: rgba(20, 24, 34, 0.14);
-  --shadow-card: 0 1px 2px rgba(20, 24, 34, 0.04), 0 2px 8px rgba(20, 24, 34, 0.05);
-  --shadow-pop: 0 12px 40px rgba(20, 24, 34, 0.16);
-  /* six-step type scale */
-  --t-xs: 12px;
+  --blue-ink: #0060d0;
+  --blue-wash: rgba(10, 132, 255, 0.1);
+  --red: #c6403f;
+  --hairline: #e5e5e3;
+  --hairline-strong: #dcdcda;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.16);
+  /* Bear seven-step type scale */
+  --t-11: 11px;
+  --t-xs: 13px;
   --t-sm: 13px;
   --t-base: 15px;
-  --t-lg: 18px;
-  --t-xl: 24px;
-  --t-2xl: 32px;
-  --r-sm: 8px;
-  --r: 12px;
-  --r-lg: 16px;
+  --t-lg: 17px;
+  --t-xl: 20px;
+  --t-2xl: 28px;
+  --t-hero: 44px;
+  /* three line-heights */
+  --lh-body: 1.7;
+  --lh-ui: 1.4;
+  --lh-title: 1.25;
+  /* three radii: controls / cards / pills */
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 10px;
 }
 
 body.theme-dark {
   color-scheme: dark;
-  --bg: #0e1116;
-  --surface: #161a21;
-  --card: #191e26;
-  --card-sunk: #12161c;
-  --text: #e8eaed;
-  --muted: #9ba3af;
-  --faint: #6c7480;
+  --bg: #2c2c2f;
+  --rail-bg: #2c2c2f;
+  --sidebar-bg: #252528;
+  --surface: #252528;
+  --card: #1c1c1e;
+  --card-sunk: #2f2f32;
+  --text: #d8d8d6;
+  --muted: #8a8a88;
+  --faint: #8a8a88;
   --blue: #4c9dff;
   --blue-ink: #7bb8ff;
-  --blue-wash: rgba(76, 157, 255, 0.12);
-  --hairline: rgba(255, 255, 255, 0.09);
-  --hairline-strong: rgba(255, 255, 255, 0.14);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 2px 10px rgba(0, 0, 0, 0.28);
-  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --blue-wash: rgba(76, 157, 255, 0.14);
+  --red: #e05a58;
+  --hairline: #38383a;
+  --hairline-strong: #454547;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.34);
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -58,10 +72,11 @@ body {
   height: 100vh;
   overflow: hidden;
   font-family:
-    Inter, "SF Pro Text", -apple-system, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", Arial, sans-serif;
+    -apple-system, "SF Pro Text", "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--bg);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -99,7 +114,7 @@ h2 {
   padding: 12px 8px;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
-  background: var(--surface);
+  background: var(--rail-bg);
 }
 
 .brand {
@@ -108,7 +123,7 @@ h2 {
   width: 40px;
   height: 40px;
   margin-bottom: 8px;
-  border-radius: 10px;
+  border-radius: var(--r);
   color: #fff;
   background: var(--blue);
 }
@@ -133,13 +148,24 @@ h2 {
 .rail-btn {
   width: 40px;
   height: 40px;
-  font-size: var(--t-lg);
 }
 
 .icon-btn {
   width: 32px;
   height: 32px;
-  font-size: var(--t-base);
+}
+
+/* Lucide inline icons: 18px UI, 20px in the rail, currentColor */
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.rail-btn .icon {
+  width: 20px;
+  height: 20px;
 }
 
 .rail-btn:hover,
@@ -164,7 +190,14 @@ h2 {
   min-width: 0;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
-  background: var(--surface);
+}
+
+.sidebar {
+  background: var(--sidebar-bg);
+}
+
+.main-pane {
+  background: var(--card);
 }
 
 .sidebar {
@@ -213,8 +246,8 @@ h2 {
   grid-column: 1 / -1;
   overflow: hidden;
   font-size: var(--t-base);
-  font-weight: 700;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: var(--lh-title);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -233,7 +266,7 @@ h2 {
   background: none;
   color: var(--faint);
   font-size: var(--t-xs);
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: left;
@@ -362,7 +395,7 @@ h2 {
   padding: 12px 0 8px;
   color: var(--faint);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -459,7 +492,7 @@ h2 {
 .theme-row span {
   color: var(--muted);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  line-height: var(--lh-body);
 }
 
 .note-item span {
@@ -495,8 +528,8 @@ h2 {
 .pane-title h2 {
   flex-shrink: 0;
   font-size: var(--t-lg);
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: var(--lh-title);
   white-space: nowrap;
 }
 
@@ -578,7 +611,7 @@ h2 {
   border-color: transparent;
   background: transparent;
   font-size: var(--t-xl);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -763,7 +796,7 @@ h2 {
 .hero-review > span {
   color: var(--blue);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -772,14 +805,14 @@ h2 {
   display: block;
   margin-top: 4px;
   font-size: var(--t-xl);
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: var(--lh-title);
 }
 
 .hero-review p {
   max-width: 60ch;
   font-size: var(--t-sm);
-  line-height: 1.65;
+  line-height: var(--lh-body);
 }
 
 .hero-review .echo-why {
@@ -805,16 +838,27 @@ h2 {
 }
 
 .echo-empty .echo-empty-icon {
-  font-size: var(--t-xl);
   color: var(--faint);
   line-height: 1;
+}
+
+.echo-empty .echo-empty-icon .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-inline {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  vertical-align: -1px;
 }
 
 .echo-empty p {
   max-width: 48ch;
   color: var(--muted);
   font-size: var(--t-sm);
-  line-height: 1.6;
+  line-height: var(--lh-body);
 }
 
 .weekly-digest {
@@ -861,7 +905,7 @@ h2 {
 .digest-row span {
   color: var(--muted);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  line-height: var(--lh-body);
 }
 
 .digest-mark {
@@ -870,7 +914,7 @@ h2 {
   background: var(--blue-wash);
   color: var(--blue);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .echo-stats {
@@ -897,7 +941,7 @@ h2 {
 .stat-row strong {
   color: var(--text);
   font-size: var(--t-sm);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .stat-row.north {
@@ -949,7 +993,7 @@ h2 {
   margin-bottom: 4px;
   color: var(--blue);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -958,7 +1002,7 @@ h2 {
   display: block;
   margin-bottom: 4px;
   font-size: var(--t-lg);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -966,14 +1010,14 @@ h2 {
   margin: 0 0 6px;
   color: var(--text);
   font-size: var(--t-sm);
-  line-height: 1.6;
+  line-height: var(--lh-body);
 }
 
 .echo-snippet {
   margin: 0 0 16px;
   color: var(--muted);
   font-size: var(--t-sm);
-  line-height: 1.6;
+  line-height: var(--lh-body);
 }
 
 .echo-actions {
@@ -1030,9 +1074,8 @@ h2 {
   overflow: auto;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-pop);
-  transform: translateX(340px);
+  background: var(--card);
+  box-shadow: var(--shadow-pop) placeholder;
   transition: transform 240ms ease;
 }
 
@@ -1074,7 +1117,7 @@ h2 {
 .ownership > span {
   color: var(--blue);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1083,8 +1126,8 @@ h2 {
   display: block;
   margin-top: 4px;
   font-size: var(--t-base);
-  font-weight: 700;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: var(--lh-title);
 }
 
 .empty-mini {
@@ -1093,7 +1136,7 @@ h2 {
   border-radius: var(--r-sm);
   color: var(--faint);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  line-height: var(--lh-body);
 }
 
 /* ---------- overlays: onboarding + importer ---------- */
@@ -1133,7 +1176,7 @@ h2 {
 .settings-card h2 {
   margin: 0 0 20px;
   font-size: var(--t-lg);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .settings-row {
@@ -1152,7 +1195,7 @@ h2 {
   align-items: center;
   gap: 8px;
   font-size: var(--t-base);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .settings-tag {
@@ -1161,7 +1204,7 @@ h2 {
   background: var(--blue-wash);
   color: var(--blue);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
@@ -1169,7 +1212,7 @@ h2 {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: var(--t-sm);
-  line-height: 1.6;
+  line-height: var(--lh-body);
 }
 
 .settings-privacy {
@@ -1237,7 +1280,7 @@ h2 {
 .importer-card h2 {
   margin: 0 0 8px;
   font-size: var(--t-lg);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -1246,7 +1289,7 @@ h2 {
   margin: 0 0 24px;
   color: var(--muted);
   font-size: var(--t-sm);
-  line-height: 1.6;
+  line-height: var(--lh-body);
 }
 
 .onboarding-actions,
@@ -1289,27 +1332,31 @@ h2 {
 }
 
 .import-drop-icon {
-  font-size: var(--t-xl);
   color: var(--blue);
   line-height: 1;
 }
 
+.import-drop-icon .icon {
+  width: 24px;
+  height: 24px;
+}
+
 .import-drop strong {
   font-size: var(--t-base);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .import-drop-hint {
   color: var(--faint);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  line-height: var(--lh-body);
 }
 
 .onboarding-hint {
   margin: 0 0 12px;
   color: var(--faint);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  line-height: var(--lh-body);
 }
 
 .onboarding-hint.warn {
@@ -1353,7 +1400,7 @@ h2 {
   display: block;
   margin-bottom: 4px;
   font-size: var(--t-base);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .importer-quiet {

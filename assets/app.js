@@ -728,7 +728,7 @@ function renderEchoCard() {
     return;
   }
   els.echoCard.innerHTML = `
-    <button class="echo-close" type="button" data-echo="close" title="${escapeHtml(t("echoClose"))}">✕</button>
+    <button class="echo-close" type="button" data-echo="close" title="${escapeHtml(t("echoClose"))}"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-x"></use></svg></button>
     <span class="echo-tag">${escapeHtml(t("echoTitle"))}</span>
     <strong>${escapeHtml(shown.note.title)}</strong>
     <p class="echo-why">${escapeHtml(shown.why)}</p>
@@ -841,7 +841,7 @@ function noteButton(note) {
   button.innerHTML = `
     <strong>${escapeHtml(note.title)}</strong>
     <span>${escapeHtml(snippet(note.body, 72))}</span>
-    <small>${note.pinned ? "★ " : ""}${escapeHtml(tags) || t("untagged")} · ${timeAgo(note.updatedAt)}</small>
+    <small>${note.pinned ? '<svg class="icon icon-inline" aria-hidden="true"><use href="./assets/icons.svg#i-pin"></use></svg> ' : ""}${escapeHtml(tags) || t("untagged")} · ${timeAgo(note.updatedAt)}</small>
   `;
   button.addEventListener("click", () => selectNote(note.id));
   return button;
@@ -1053,7 +1053,7 @@ function renderReview() {
     // Humble empty state — a quiet line, not a giant headline.
     els.memoryCard.className = "echo-empty";
     els.memoryCard.innerHTML = `
-      <span class="echo-empty-icon" aria-hidden="true">↺</span>
+      <span class="echo-empty-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-history"></use></svg></span>
       <p>${escapeHtml(t("echoQuiet"))}</p>
     `;
   }

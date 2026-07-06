@@ -22,22 +22,22 @@
             <circle cx="22.5" cy="32" r="4" fill="currentColor"/>
           </svg>
         </div>
-        <button class="rail-btn active" type="button" data-view="write" data-i18n-title="railWrite" title="写作">✎</button>
-        <button class="rail-btn" type="button" data-view="library" data-i18n-title="railLibrary" title="笔记库">☰</button>
-        <button class="rail-btn" type="button" data-view="network" data-i18n-title="railNetwork" title="知识网络">◎</button>
-        <button class="rail-btn" type="button" data-view="review" data-i18n-title="railReview" title="知识回流">↺</button>
-        <button class="rail-btn bottom" type="button" id="settingsBtn" data-i18n-title="settingsTitle" title="设置">⚙</button>
+        <button class="rail-btn active" type="button" data-view="write" data-i18n-title="railWrite" title="写作"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-pencil-line"></use></svg></button>
+        <button class="rail-btn" type="button" data-view="library" data-i18n-title="railLibrary" title="笔记库"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-library-big"></use></svg></button>
+        <button class="rail-btn" type="button" data-view="network" data-i18n-title="railNetwork" title="知识网络"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-waypoints"></use></svg></button>
+        <button class="rail-btn" type="button" data-view="review" data-i18n-title="railReview" title="知识回流"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-history"></use></svg></button>
+        <button class="rail-btn bottom" type="button" id="settingsBtn" data-i18n-title="settingsTitle" title="设置"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-settings-2"></use></svg></button>
         <button class="rail-btn" type="button" id="langToggle" data-i18n-title="railLang" title="Switch language">EN</button>
-        <button class="rail-btn" type="button" id="themeToggle" data-i18n-title="railTheme" title="切换主题">◐</button>
+        <button class="rail-btn" type="button" id="themeToggle" data-i18n-title="railTheme" title="切换主题"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-sun-moon"></use></svg></button>
       </aside>
 
       <aside class="sidebar" aria-label="Library">
         <header class="sidebar-head">
           <p class="sidebar-eyebrow">DockEcho</p>
           <div class="sidebar-head-btns">
-            <button class="icon-btn" id="openVault" type="button" data-i18n-title="openFolder" title="打开文件夹">▤</button>
-            <button class="icon-btn" id="openImport" type="button" data-i18n-title="importOpen" title="带上你的旧笔记">⇪</button>
-            <button class="icon-btn" id="newNote" type="button" data-i18n-title="newNote" title="新建笔记">+</button>
+            <button class="icon-btn" id="openVault" type="button" data-i18n-title="openFolder" title="打开文件夹"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-folder-open"></use></svg></button>
+            <button class="icon-btn" id="openImport" type="button" data-i18n-title="importOpen" title="带上你的旧笔记"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-import"></use></svg></button>
+            <button class="icon-btn" id="newNote" type="button" data-i18n-title="newNote" title="新建笔记"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-plus"></use></svg></button>
           </div>
           <h1 data-i18n="appSubtitle">本地知识网络</h1>
           <button class="vault-status" id="vaultStatus" type="button"></button>
@@ -49,16 +49,16 @@
 
         <nav class="nav-list" aria-label="Filters">
           <button class="nav-item active" type="button" data-filter="all">
-            <span>◇</span><span data-i18n="navAll">全部笔记</span><span class="nav-count" id="countAll">0</span>
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-files"></use></svg><span data-i18n="navAll">全部笔记</span><span class="nav-count" id="countAll">0</span>
           </button>
           <button class="nav-item" type="button" data-filter="daily">
-            <span>☀</span><span data-i18n="navDaily">每日笔记</span><span class="nav-count" id="countDaily">0</span>
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-calendar-days"></use></svg><span data-i18n="navDaily">每日笔记</span><span class="nav-count" id="countDaily">0</span>
           </button>
           <button class="nav-item" type="button" data-filter="pinned">
-            <span>★</span><span data-i18n="navPinned">置顶</span><span class="nav-count" id="countPinned">0</span>
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-star"></use></svg><span data-i18n="navPinned">置顶</span><span class="nav-count" id="countPinned">0</span>
           </button>
           <button class="nav-item" type="button" data-filter="unlinked">
-            <span>○</span><span data-i18n="navUnlinked">待连接</span><span class="nav-count" id="countUnlinked">0</span>
+            <svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-unlink"></use></svg><span data-i18n="navUnlinked">待连接</span><span class="nav-count" id="countUnlinked">0</span>
           </button>
         </nav>
 
@@ -90,7 +90,7 @@
             <button class="soft-btn" id="exportNote" type="button" data-i18n="exportNote">导出当前</button>
             <button class="soft-btn" id="exportAll" type="button" data-i18n="exportAll">导出全部</button>
             <button class="primary-btn" id="smartOrganize" type="button" data-i18n="smartOrganize">发现连接</button>
-            <button class="icon-btn insight-toggle" id="insightToggle" type="button" aria-expanded="false">◧</button>
+            <button class="icon-btn insight-toggle" id="insightToggle" type="button" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-panel-right"></use></svg></button>
           </div>
         </header>
 
@@ -147,7 +147,7 @@
       <aside class="insight-pane" id="insightPane" aria-label="Insights">
         <div class="insight-head">
           <span class="section-title flat" data-i18n="insightPaneTitle">相关信息</span>
-          <button class="icon-btn" id="insightClose" type="button" data-i18n-title="insightCollapse" title="收起">✕</button>
+          <button class="icon-btn" id="insightClose" type="button" data-i18n-title="insightCollapse" title="收起"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-x"></use></svg></button>
         </div>
         <section class="insight-card ownership">
           <span>Local-first</span>
@@ -174,11 +174,11 @@
 
     <div class="importer hidden" id="importer" role="dialog" aria-modal="true">
       <div class="importer-card">
-        <button class="echo-close" type="button" id="importerClose" data-i18n-title="echoClose" title="关闭">✕</button>
+        <button class="echo-close" type="button" id="importerClose" data-i18n-title="echoClose" title="关闭"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-x"></use></svg></button>
         <h2 data-i18n="importTitle">带上你的旧笔记</h2>
         <p class="importer-sub" data-i18n="importSub">把文件拖进来，或点击选择——DockEcho 会自动识别格式。全部在你的设备上解析，不上传任何内容。</p>
         <button class="import-drop" type="button" id="importDrop">
-          <span class="import-drop-icon" aria-hidden="true">⇪</span>
+          <span class="import-drop-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-import"></use></svg></span>
           <strong data-i18n="importDrop">拖放文件到这里</strong>
           <span class="import-drop-hint" data-i18n="importDropHint">支持 Notion、Evernote、Roam、Day One、Google Keep、Bear、Kindle、Readwise 与 Markdown</span>
         </button>
@@ -191,7 +191,7 @@
 
     <div class="settings hidden" id="settings" role="dialog" aria-modal="true">
       <div class="settings-card">
-        <button class="echo-close" type="button" id="settingsClose" data-i18n-title="echoClose" title="关闭">✕</button>
+        <button class="echo-close" type="button" id="settingsClose" data-i18n-title="echoClose" title="关闭"><svg class="icon" aria-hidden="true"><use href="./assets/icons.svg#i-x"></use></svg></button>
         <h2 data-i18n="settingsTitle">设置</h2>
         <section class="settings-row">
           <div class="settings-label">
