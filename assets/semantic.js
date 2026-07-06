@@ -13,7 +13,7 @@ const SEMANTIC_MODEL = "Xenova/paraphrase-multilingual-MiniLM-L12-v2"; // zh + e
 const SEMANTIC_CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3";
 const SEMANTIC_IDB = "dockecho.semantic.v1";
 const SEMANTIC_STORE = "vectors";
-const SEMANTIC_ENABLE_TIMEOUT = 120000; // don't hang forever on a stalled download
+const SEMANTIC_ENABLE_TIMEOUT = 180000; // first uncached download of the ~30MB model can be slow
 
 const semantic = {
   status: "off", // off | loading | ready | failed
