@@ -817,6 +817,62 @@ h2 {
   line-height: 1.6;
 }
 
+.weekly-digest {
+  margin-bottom: 16px;
+  padding: 20px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  background: var(--card);
+}
+
+.weekly-digest.hidden {
+  display: none;
+}
+
+.digest-list {
+  display: grid;
+  gap: 6px;
+}
+
+.digest-row {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.digest-row:hover {
+  background: var(--card-sunk);
+}
+
+.digest-row strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.digest-row span {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  line-height: 1.5;
+}
+
+.digest-mark {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--blue-wash);
+  color: var(--blue);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
 .echo-stats {
   display: grid;
   gap: 8px;
@@ -1120,6 +1176,11 @@ h2 {
   color: var(--blue) !important;
 }
 
+.settings-cdn {
+  color: var(--faint) !important;
+  font-size: var(--t-xs) !important;
+}
+
 .settings-status {
   color: var(--faint) !important;
   font-size: var(--t-xs) !important;
@@ -1365,5 +1426,80 @@ h2 {
   .review-card:not(.hero-review),
   .echo-empty {
     grid-column: auto;
+  }
+}
+
+/* phones: keep every view readable and tappable, no horizontal scroll */
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .rail {
+    top: 8px;
+    height: calc(100vh - 16px);
+    gap: 4px;
+    padding: 8px 4px;
+  }
+
+  .rail-btn,
+  .brand {
+    width: 36px;
+    height: 36px;
+  }
+
+  .pane-head {
+    flex-wrap: wrap;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .head-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .head-actions .soft-btn,
+  .head-actions .primary-btn {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: var(--t-xs);
+  }
+
+  .write-view,
+  .library-view,
+  .network-view,
+  .review-view {
+    padding: 12px;
+  }
+
+  .editor-shell {
+    padding: 16px;
+    min-height: 60vh;
+  }
+
+  .title-input {
+    font-size: var(--t-lg);
+  }
+
+  .library-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cluster-board {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .echo-card,
+  .editor-shell {
+    max-width: 100%;
+  }
+
+  .settings-card,
+  .onboarding-card,
+  .importer-card {
+    padding: 24px 20px;
   }
 }

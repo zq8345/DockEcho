@@ -365,10 +365,10 @@ a {
   border: 2px solid var(--blue);
 }
 
-.switch-note {
-  margin-top: 10px !important;
-  color: var(--faint) !important;
-  font-size: var(--t-xs) !important;
+.switch-card .switch-note {
+  margin-top: 10px;
+  color: var(--faint);
+  font-size: var(--t-xs);
 }
 
 /* ---------- pricing ---------- */
@@ -538,6 +538,58 @@ a {
 .land-faq p {
   margin: 0;
   padding: 0 0 16px;
+  color: var(--muted);
+  font-size: var(--t-sm);
+  line-height: 1.65;
+}
+
+/* ---------- changelog ---------- */
+
+.clog-title {
+  margin: 0 0 8px;
+  font-size: var(--t-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.clog-intro {
+  max-width: 52ch;
+  margin: 0 auto 48px;
+  color: var(--muted);
+  font-size: var(--t-base);
+  line-height: 1.65;
+  text-align: center;
+}
+
+.clog-list {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.clog-entry {
+  padding: 20px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.clog-entry time {
+  color: var(--faint);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.clog-entry h2 {
+  margin: 6px 0 6px;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.clog-entry p {
+  margin: 0;
   color: var(--muted);
   font-size: var(--t-sm);
   line-height: 1.65;

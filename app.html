@@ -6,6 +6,8 @@
     <title>DockEcho</title>
     <meta name="description" content="Local-first knowledge network — your notes come back to you." />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#f7f8fa" />
     <link rel="stylesheet" href="./assets/styles.css" />
   </head>
   <body>
@@ -123,6 +125,7 @@
         </section>
 
         <section class="review-view hidden" id="reviewView">
+          <section class="weekly-digest hidden" id="weeklyDigest"></section>
           <div class="review-grid">
             <section class="review-card hero-review" id="memoryCard"></section>
             <section class="review-card">
@@ -195,6 +198,7 @@
             <strong><span data-i18n="semanticTitle">语义回声</span><span class="settings-tag" data-i18n="semanticExperimental">实验性</span></strong>
             <p data-i18n="semanticDesc">用更懂含义的本地模型替代关键词匹配，跨语言也能认出相近的想法。</p>
             <p class="settings-privacy" data-i18n="semanticPrivacy">下载的是模型，上传的是零。推理全在你的设备上完成。</p>
+            <p class="settings-cdn" data-i18n="semanticCdn">开启时会从 CDN（jsDelivr、Hugging Face）下载运行库与模型；未来版本将改为同源自托管。</p>
             <p class="settings-status" id="semanticStatus"></p>
           </div>
           <button class="switch" id="semanticSwitch" type="button" role="switch" aria-checked="false"><span class="switch-knob"></span></button>

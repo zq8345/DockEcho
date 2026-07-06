@@ -201,7 +201,9 @@ function pickOnThisDay({ notes, meta, now, excludeId = null }) {
 
 // meta shape: { lastDate, lastNoteId, closedDate, history: {noteId: lastShownTs},
 //               snoozed: {noteId: untilTs}, dismissed: {noteId: [ [terms...] ]} }
-function pickTodayEcho({ notes, index, meta, now, contextIds, excludeId = null }) {
+// semanticSim(idA, idB) -> number|null lets the on-device model drive candidate
+// selection when it's ready; null falls back to TF-IDF per pair.
+function pickTodayEcho({ notes, index, meta, now, contextIds, excludeId = null, semanticSim = null }) {
   if (notes.length < 2 || !contextIds.length) return null;
   index.sync(notes);
 
@@ -235,7 +237,8 @@ function pickTodayEcho({ notes, index, meta, now, contextIds, excludeId = null }
     let bestContextId = null;
     let sum = 0;
     contextIds.forEach((contextId) => {
-      const sim = index.similarity(contextId, note.id);
+      const semScore = semanticSim ? semanticSim(contextId, note.id) : null;
+      const sim = semScore !== null && semScore !== undefined ? semScore : index.similarity(contextId, note.id);
       sum += sim;
       if (sim > best) {
         best = sim;

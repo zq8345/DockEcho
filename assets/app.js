@@ -88,6 +88,7 @@ const els = {
   connectionReview: document.querySelector("#connectionReview"),
   echoCard: document.querySelector("#echoCard"),
   echoStats: document.querySelector("#echoStats"),
+  weeklyDigest: document.querySelector("#weeklyDigest"),
   openImport: document.querySelector("#openImport"),
   importer: document.querySelector("#importer"),
   importerClose: document.querySelector("#importerClose"),
@@ -601,6 +602,9 @@ function currentEcho() {
     return why ? { note, why } : null;
   }
   echoIndex.sync(state.notes);
+  const semanticSim = (typeof semanticReady === "function" && semanticReady())
+    ? (a, b) => semanticSimilarity(a, b)
+    : null;
   const pick = pickTodayEcho({
     notes: state.notes,
     index: echoIndex,
@@ -608,6 +612,7 @@ function currentEcho() {
     now: Date.now(),
     contextIds: echoContextIds(),
     excludeId: state.selectedId,
+    semanticSim,
   });
   if (!pick) return null;
   const why = pick.onThisDayYears
@@ -620,9 +625,13 @@ function currentEcho() {
   echo.lastContextId = pick.bestContextId;
   echo.lastContextTerms = pick.contextTerms.slice(0, 12);
   echo.lastOnThisDay = pick.onThisDayYears ?? 0;
+  echo.lastTouched = "";
   echo.closedDate = "";
   echo.history ??= {};
   echo.history[pick.note.id] = Date.now();
+  echo.log = (echo.log ?? []).filter((e) => e.date !== todayKey);
+  echo.log.push({ date: todayKey, ts: Date.now(), noteId: pick.note.id, why, onThisDay: pick.onThisDayYears ?? 0, action: "" });
+  echo.log = echo.log.slice(-40);
   stats.echoShown = (stats.echoShown ?? 0) + 1;
   save();
   return { note: pick.note, why };
@@ -648,13 +657,37 @@ function buildEchoWhy(note, terms, contextId) {
   if (terms?.length) {
     return t("echoWhyTerms", { age, current: context.title, terms: terms.slice(0, 2).join(t("listJoin")) });
   }
+  // Semantic hit with no shared words — the model connected them by meaning.
+  // Cross-language matches get to say so out loud (our standout capability).
+  if (typeof semanticReady === "function" && semanticReady()) {
+    if (noteLang(note) !== noteLang(context)) {
+      return t("echoWhyCrossLang", { age, other: context.title });
+    }
+    return t("echoWhySemantic", { age, current: context.title });
+  }
   return "";
+}
+
+// Rough language of a note: "zh" when CJK dominates, else "en". Only used to
+// decide whether a semantic match is cross-language for the "why" wording.
+function noteLang(note) {
+  const text = `${note.title} ${note.body}`;
+  const cjk = (text.match(/[一-龥]/g) ?? []).length;
+  const latin = (text.match(/[a-z]/gi) ?? []).length;
+  return cjk > latin ? "zh" : "en";
+}
+
+function echoLogAction(echo, action) {
+  echo.lastTouched = todayKey;
+  const entry = (echo.log ?? []).find((e) => e.date === todayKey);
+  if (entry) entry.action = action;
 }
 
 function echoAction(action) {
   const { echo, stats, save } = echoStore();
   const note = state.notes.find((item) => item.id === echo.lastNoteId);
   if (!note) return;
+  echoLogAction(echo, action);
   if (action === "open") {
     stats.echoOpened = (stats.echoOpened ?? 0) + 1;
     if (Date.now() - note.createdAt > 90 * DAY_MS) stats.oldEchoOpened = (stats.oldEchoOpened ?? 0) + 1;
@@ -971,7 +1004,40 @@ function renderNetwork() {
   if (!unlinked.size) els.orphanNotes.innerHTML = `<div class="empty-mini">${t("noOrphans")}</div>`;
 }
 
+// Past 7 days of echoes with what the user did with each — the in-app "digest"
+// that the future Daily Echo email will just be a delivery channel for.
+function renderWeeklyDigest() {
+  const { echo } = echoStore();
+  const cutoff = Date.now() - 7 * DAY_MS;
+  const entries = (echo.log ?? [])
+    .filter((e) => e.ts >= cutoff && state.notes.some((n) => n.id === e.noteId))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 5);
+  els.weeklyDigest.classList.toggle("hidden", entries.length === 0);
+  if (!entries.length) {
+    els.weeklyDigest.replaceChildren();
+    return;
+  }
+  const actionLabel = { open: t("digestOpened"), insert: t("digestInserted"), snooze: t("digestSnoozed") };
+  const rows = entries.map((e) => {
+    const note = state.notes.find((n) => n.id === e.noteId);
+    const mark = actionLabel[e.action] ? `<span class="digest-mark">${escapeHtml(actionLabel[e.action])}</span>` : "";
+    return `<button class="digest-row" type="button" data-id="${escapeHtml(e.noteId)}">
+      <strong>${escapeHtml(note.title)}${mark}</strong>
+      <span>${escapeHtml(e.why || snippet(note.body, 80))}</span>
+    </button>`;
+  }).join("");
+  els.weeklyDigest.innerHTML = `
+    <div class="section-title flat"><span>${escapeHtml(t("digestTitle"))}</span></div>
+    <div class="digest-list">${rows}</div>
+  `;
+  els.weeklyDigest.querySelectorAll(".digest-row").forEach((row) => {
+    row.addEventListener("click", () => selectNote(row.dataset.id));
+  });
+}
+
 function renderReview() {
+  renderWeeklyDigest();
   const shown = currentEcho();
   if (shown) {
     els.memoryCard.className = "review-card hero-review";
@@ -1143,10 +1209,12 @@ function openImporter() {
   els.importerEcho.classList.add("hidden");
   els.importerEcho.replaceChildren();
   els.importer.classList.remove("hidden");
+  focusIntoOverlay(els.importer);
 }
 
 function closeImporter() {
   els.importer.classList.add("hidden");
+  restoreOverlayFocus(els.importer);
 }
 
 function importReportError(text) {
@@ -1330,6 +1398,7 @@ function initOnboarding() {
   document.querySelector("#onboardVaultHint")?.classList.toggle("hidden", !supported);
   els.onboardUnsupported.classList.toggle("hidden", supported);
   els.onboarding.classList.remove("hidden");
+  focusIntoOverlay(els.onboarding);
 }
 
 function hideOnboarding() {
@@ -1341,11 +1410,62 @@ function hideOnboarding() {
 function openSettings() {
   renderSemanticStatus();
   els.settings.classList.remove("hidden");
+  focusIntoOverlay(els.settings);
 }
 
 function closeSettings() {
   els.settings.classList.add("hidden");
+  restoreOverlayFocus(els.settings);
 }
+
+/* ---------- overlay accessibility: focus move-in, Esc, Tab trap ---------- */
+
+function overlayFocusables(overlayEl) {
+  return [...overlayEl.querySelectorAll('button:not([disabled]), [href], input:not([type="hidden"]), textarea, select, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => el.offsetParent !== null);
+}
+
+function focusIntoOverlay(overlayEl) {
+  overlayEl.__prevFocus = document.activeElement;
+  const f = overlayFocusables(overlayEl);
+  (f[0] ?? overlayEl).focus?.();
+}
+
+function restoreOverlayFocus(overlayEl) {
+  overlayEl.__prevFocus?.focus?.();
+  overlayEl.__prevFocus = null;
+}
+
+function activeOverlay() {
+  return [
+    { el: els.settings, close: closeSettings },
+    { el: els.importer, close: closeImporter },
+    { el: els.onboarding, close: () => els.onboardBrowser.click() },
+  ].find((o) => o.el && !o.el.classList.contains("hidden")) ?? null;
+}
+
+document.addEventListener("keydown", (event) => {
+  const overlay = activeOverlay();
+  if (!overlay) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    overlay.close();
+    return;
+  }
+  if (event.key === "Tab") {
+    const f = overlayFocusables(overlay.el);
+    if (!f.length) return;
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+});
 
 function renderSemanticStatus() {
   const on = Boolean(state.semantic);
@@ -1364,12 +1484,28 @@ async function applySemantic() {
   if (state.semantic) {
     await semanticEnable(state.notes, () => {
       renderSemanticStatus();
-      if (semanticState() === "ready") render(false);
+      if (semanticState() === "ready") {
+        recomputeTodayEchoIfUntouched();
+        render(false);
+      }
     });
   } else {
     semanticDisable();
   }
   renderSemanticStatus();
+}
+
+// Once the model is ready, upgrade today's card to the semantic pick — but only
+// if the user hasn't engaged with it yet. Never yank a card they've already seen
+// and acted on.
+function recomputeTodayEchoIfUntouched() {
+  const { echo, save } = echoStore();
+  if (echo.lastDate !== todayKey) return;
+  if (echo.lastTouched === todayKey || echo.closedDate === todayKey) return;
+  echo.lastDate = "";
+  echo.lastNoteId = "";
+  save();
+  currentEcho(); // re-picks with semantic scores and re-logs
 }
 
 /* ---------- events & boot ---------- */
@@ -1477,3 +1613,29 @@ render();
 initOnboarding();
 restoreVault();
 if (state.semantic) applySemantic(); // opt-in; re-loads the model lazily
+registerServiceWorker();
+handleSharedCapture();
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("./sw.js").catch((error) => {
+    console.warn("DockEcho service worker registration failed", error?.message ?? error);
+  });
+}
+
+// Text shared to the installed app (Web Share Target) lands here: the SW stashed
+// it, we turn it into a #captured note in browser mode.
+async function handleSharedCapture() {
+  if (!new URLSearchParams(location.search).has("shared")) return;
+  try {
+    const res = await fetch("/__dockecho_share__", { cache: "no-store" });
+    const payload = await res.json();
+    const text = [payload?.title, payload?.text, payload?.url].filter(Boolean).join("\n").trim();
+    if (text) {
+      addNote({ title: payload?.title?.trim() || text.split("\n")[0].slice(0, 60) || t("newIdea"), body: `${text}\n\n#captured` });
+    }
+  } catch {
+    // nothing to capture
+  }
+  history.replaceState(null, "", "./app.html");
+}

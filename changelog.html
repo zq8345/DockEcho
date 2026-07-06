@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DockEcho — Changelog</title>
+    <meta name="description" content="What's new in DockEcho — the changes that make your notes come back to you." />
+    <link rel="canonical" href="https://www.dockecho.com/changelog.html" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/landing.css" />
+  </head>
+  <body class="landing">
+    <header class="land-header">
+      <a class="land-brand" href="./">
+        <img src="./assets/brand-mark.svg" alt="" width="34" height="34" />
+        <span>DockEcho</span>
+      </a>
+      <nav class="land-nav">
+        <a class="land-nav-link" href="./" data-i18n="clogBack">← 回首页</a>
+        <button class="land-lang" id="landLang" type="button">EN</button>
+      </nav>
+    </header>
+
+    <main class="land-main">
+      <section class="land-section">
+        <h1 class="clog-title" data-i18n="clogTitle">更新记录</h1>
+        <p class="clog-intro" data-i18n="clogIntro">DockEcho 的每一步公开可见。以下是最近让你的想法更容易回来的变化。</p>
+
+        <ol class="clog-list">
+          <li class="clog-entry">
+            <time>2026-07-06</time>
+            <h2 data-i18n="clogSemanticT">语义回声（实验性）</h2>
+            <p data-i18n="clogSemanticB">回声现在读得懂含义，甚至能跨语言认出你在说同一个想法。</p>
+          </li>
+          <li class="clog-entry">
+            <time>2026-07-06</time>
+            <h2 data-i18n="clogWeeklyT">本周回声</h2>
+            <p data-i18n="clogWeeklyB">在应用里回顾过去 7 天回来找你的想法。</p>
+          </li>
+          <li class="clog-entry">
+            <time>2026-07-06</time>
+            <h2 data-i18n="clogPwaT">装成手机 App</h2>
+            <p data-i18n="clogPwaB">把 DockEcho 装到手机主屏，分享任何文字给它就是一条笔记。</p>
+          </li>
+          <li class="clog-entry">
+            <time>2026-07-05</time>
+            <h2 data-i18n="clogMigrateT">搬家中心</h2>
+            <p data-i18n="clogMigrateB">从主流工具一键导入，时间戳原样保真。</p>
+          </li>
+          <li class="clog-entry">
+            <time>2026-07-05</time>
+            <h2 data-i18n="clogOnThisDayT">「N 年前的今天」</h2>
+            <p data-i18n="clogOnThisDayB">你多年前同一天写下的想法会回来找你。</p>
+          </li>
+          <li class="clog-entry">
+            <time>2026-07-05</time>
+            <h2 data-i18n="clogQuietT">更安静的写作视图</h2>
+            <p data-i18n="clogQuietB">写作时只剩纸和回声。</p>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="land-footer">
+      <p data-i18n="landFooterPrivacy">无遥测。除非你明确要求，你的笔记永远不会离开你的设备。</p>
+      <p><a href="https://github.com/zq8345/DockEcho" rel="noopener">GitHub</a> · <span>© 2026 DockEcho</span></p>
+    </footer>
+
+    <script src="./assets/i18n.js"></script>
+    <script>
+      (function () {
+        var KEY = "dockecho.landing.lang";
+        function pick() {
+          var stored = localStorage.getItem(KEY);
+          if (I18N[stored]) return stored;
+          return detectLang();
+        }
+        function apply() {
+          applyStaticI18n();
+          document.querySelector("#landLang").textContent = t("switchTo");
+        }
+        setI18nLang(pick());
+        document.querySelector("#landLang").addEventListener("click", function () {
+          var next = currentLang() === "zh" ? "en" : "zh";
+          setI18nLang(next);
+          localStorage.setItem(KEY, next);
+          apply();
+        });
+        apply();
+      })();
+    </script>
+  </body>
+</html>
