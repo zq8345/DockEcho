@@ -515,7 +515,8 @@ h2 {
 
 .pane-head {
   min-height: 64px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 .pane-title {
@@ -544,8 +545,10 @@ h2 {
 .head-actions {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
+  margin-left: auto;
 }
 
 .soft-btn,
@@ -1062,7 +1065,10 @@ h2 {
 
 .insight-pane {
   position: fixed;
-  top: 16px;
+  /* Sit below the (possibly wrapped) header so the pane never covers header
+     actions at any width. --insight-top is measured from .pane-head in app.js;
+     the fallback clears a single-row header before JS runs. */
+  top: var(--insight-top, 88px);
   right: 16px;
   bottom: 16px;
   z-index: 40;
@@ -1075,7 +1081,8 @@ h2 {
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
   background: var(--card);
-  box-shadow: var(--shadow-pop) placeholder;
+  box-shadow: var(--shadow-pop);
+  transform: translateX(340px);
   transition: transform 240ms ease;
 }
 
@@ -1444,6 +1451,7 @@ h2 {
     grid-column: 2;
   }
 
+  /* mobile: a bottom-sheet drawer — slides fully off-screen when closed */
   .insight-pane {
     top: auto;
     width: auto;
@@ -1451,6 +1459,11 @@ h2 {
     right: 12px;
     bottom: 12px;
     max-height: 80vh;
+    transform: translateY(calc(100% + 24px));
+  }
+
+  .insight-pane.open {
+    transform: translateY(0);
   }
 
   .write-view,

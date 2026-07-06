@@ -756,7 +756,24 @@ function render(syncEditor = true) {
   renderVaultStatus();
   renderViews(syncEditor);
   renderInsights();
+  syncInsightTop();
 }
+
+// The insight pane is a fixed-position slide-out. Anchor its top below the main
+// header — which wraps to two rows on narrow viewports — so it never covers the
+// header action buttons at any width.
+function syncInsightTop() {
+  const head = document.querySelector(".pane-head");
+  if (!head) return;
+  const bottom = head.getBoundingClientRect().bottom;
+  document.documentElement.style.setProperty("--insight-top", Math.round(bottom + 8) + "px");
+}
+
+if (typeof ResizeObserver === "function") {
+  const head = document.querySelector(".pane-head");
+  if (head) new ResizeObserver(() => syncInsightTop()).observe(head);
+}
+window.addEventListener("resize", syncInsightTop);
 
 function renderTheme() {
   els.body.className = state.theme === "dark" ? "theme-dark" : "";
@@ -1446,7 +1463,16 @@ function activeOverlay() {
 
 document.addEventListener("keydown", (event) => {
   const overlay = activeOverlay();
-  if (!overlay) return;
+  if (!overlay) {
+    // No overlay: Escape also closes the insight drawer (esp. mobile bottom-sheet).
+    if (event.key === "Escape" && state.insightOpen) {
+      event.preventDefault();
+      state.insightOpen = false;
+      saveState();
+      render(false);
+    }
+    return;
+  }
   if (event.key === "Escape") {
     event.preventDefault();
     overlay.close();
@@ -1510,6 +1536,14 @@ function recomputeTodayEchoIfUntouched() {
 
 /* ---------- events & boot ---------- */
 
+// Defensive binding: a single missing element must never break the rest of the
+// wiring chain (a null els.* used to throw and silently kill every listener
+// declared after it).
+function bind(el, event, handler, opts) {
+  if (el) el.addEventListener(event, handler, opts);
+  else console.warn("DockEcho: missing element for", event, "listener");
+}
+
 els.railButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
 els.navItems.forEach((item) => item.addEventListener("click", () => {
   state.filter = item.dataset.filter;
@@ -1518,84 +1552,84 @@ els.navItems.forEach((item) => item.addEventListener("click", () => {
   saveState();
   render();
 }));
-els.searchInput.addEventListener("input", () => {
+bind(els.searchInput, "input", () => {
   state.query = els.searchInput.value;
   queueSave();
   scheduleRender();
 });
-els.clearSearch.addEventListener("click", () => {
+bind(els.clearSearch, "click", () => {
   state.query = "";
   state.activeTag = "";
   state.filter = "all";
   saveState();
   render();
 });
-els.newNote.addEventListener("click", () => addNote());
-els.dailyNote.addEventListener("click", getOrCreateDailyNote);
-els.noteTitle.addEventListener("input", () => updateSelected({ title: els.noteTitle.value.trim() || t("untitled") }));
-els.noteBody.addEventListener("input", () => updateSelected({ body: els.noteBody.value }));
-els.insertLink.addEventListener("click", () => {
+bind(els.newNote, "click", () => addNote());
+bind(els.dailyNote, "click", getOrCreateDailyNote);
+bind(els.noteTitle, "input", () => updateSelected({ title: els.noteTitle.value.trim() || t("untitled") }));
+bind(els.noteBody, "input", () => updateSelected({ body: els.noteBody.value }));
+bind(els.insertLink, "click", () => {
   const note = selectedNote();
   const target = relatedNotes(note, 1)[0]?.note ?? state.notes.find((item) => item.id !== note?.id);
   insertTextAtCursor(target ? `[[${target.title}]]` : `[[${t("newLinkFallback")}]]`);
 });
-els.smartOrganize.addEventListener("click", smartOrganizeNote);
-els.exportNote.addEventListener("click", exportSelectedNote);
-els.exportAll.addEventListener("click", exportAllNotes);
-els.themeToggle.addEventListener("click", () => {
+bind(els.smartOrganize, "click", smartOrganizeNote);
+bind(els.exportNote, "click", exportSelectedNote);
+bind(els.exportAll, "click", exportAllNotes);
+bind(els.themeToggle, "click", () => {
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveState();
   render();
 });
-els.langToggle.addEventListener("click", () => {
+bind(els.langToggle, "click", () => {
   state.lang = state.lang === "zh" ? "en" : "zh";
   saveState();
   render();
 });
-els.openVault.addEventListener("click", openVaultPicker);
-els.vaultStatus.addEventListener("click", () => {
+bind(els.openVault, "click", openVaultPicker);
+bind(els.vaultStatus, "click", () => {
   if (runtime.pendingHandle) resumePendingVault();
 });
-els.insightToggle.addEventListener("click", () => {
+bind(els.insightToggle, "click", () => {
   state.insightOpen = !state.insightOpen;
   saveState();
   render(false);
 });
-els.insightClose.addEventListener("click", () => {
+bind(els.insightClose, "click", () => {
   state.insightOpen = false;
   saveState();
   render(false);
 });
-els.settingsBtn.addEventListener("click", openSettings);
-els.settingsClose.addEventListener("click", closeSettings);
-els.semanticSwitch.addEventListener("click", () => {
+bind(els.settingsBtn, "click", openSettings);
+bind(els.settingsClose, "click", closeSettings);
+bind(els.semanticSwitch, "click", () => {
   state.semantic = !state.semantic;
   saveState();
   applySemantic();
 });
-els.openImport.addEventListener("click", openImporter);
-els.importerClose.addEventListener("click", closeImporter);
-els.importDrop.addEventListener("click", () => els.importFile.click());
-els.importFile.addEventListener("change", async () => {
+bind(els.openImport, "click", openImporter);
+bind(els.importerClose, "click", closeImporter);
+bind(els.importDrop, "click", () => els.importFile.click());
+bind(els.importFile, "change", async () => {
   if (els.importFile.files?.length) await processImportFiles([...els.importFile.files]);
   els.importFile.value = "";
 });
-["dragenter", "dragover"].forEach((evt) => els.importDrop.addEventListener(evt, (e) => {
+["dragenter", "dragover"].forEach((evt) => bind(els.importDrop, evt, (e) => {
   e.preventDefault();
   els.importDrop.classList.add("dragover");
 }));
-["dragleave", "drop"].forEach((evt) => els.importDrop.addEventListener(evt, (e) => {
+["dragleave", "drop"].forEach((evt) => bind(els.importDrop, evt, (e) => {
   e.preventDefault();
   els.importDrop.classList.remove("dragover");
 }));
-els.importDrop.addEventListener("drop", async (e) => {
+bind(els.importDrop, "drop", async (e) => {
   const files = [...(e.dataTransfer?.files ?? [])];
   if (files.length) await processImportFiles(files);
 });
-els.onboardVault.addEventListener("click", async () => {
+bind(els.onboardVault, "click", async () => {
   await openVaultPicker();
 });
-els.onboardBrowser.addEventListener("click", () => {
+bind(els.onboardBrowser, "click", () => {
   state.onboarded = true;
   hideOnboarding();
   saveState();

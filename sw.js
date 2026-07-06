@@ -6,7 +6,7 @@
 // the HF/jsDelivr CDNs) may be cache-first. It also receives shared text via the
 // Web Share Target and stashes it for the app to turn into a note.
 
-const CACHE = "dockecho-shell-v1";
+const CACHE = "dockecho-shell-v2";
 const SHARE_KEY = "/__dockecho_share__";
 
 self.addEventListener("install", (event) => {
