@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DockEcho — Privacy</title>
+    <meta name="description" content="DockEcho's privacy policy — your notes never leave your device, no account, no ads, no third-party trackers." />
+    <link rel="canonical" href="https://www.dockecho.com/privacy.html" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/landing.css" />
+  </head>
+  <body class="landing">
+    <header class="land-header">
+      <a class="land-brand" href="./">
+        <img src="./assets/brand-mark.svg" alt="" width="34" height="34" />
+        <span>DockEcho</span>
+      </a>
+      <nav class="land-nav">
+        <a class="land-nav-link" href="./" data-i18n="privBack">← 回首页</a>
+        <button class="land-lang" id="landLang" type="button">EN</button>
+      </nav>
+    </header>
+
+    <main class="land-main">
+      <section class="land-section priv">
+        <h1 class="clog-title" data-i18n="privTitle">隐私政策</h1>
+        <p class="clog-intro" data-i18n="privIntro">DockEcho 是本地优先的产品。这份政策只写我们真实在做的事——没有一条是场面话。</p>
+        <p class="priv-eff" data-i18n="privEffective">生效日期：2026 年 7 月</p>
+
+        <h2 data-i18n="privNotesT">你的笔记</h2>
+        <p data-i18n="privNotesB">你的笔记永远不会离开你的设备。浏览器模式下，它们存在你本机浏览器的 localStorage 里；文件夹模式下，它们就是你磁盘上的 .md 文件。我们没有服务器保存你的笔记——我们看不到，也拿不到。</p>
+
+        <h2 data-i18n="privSemanticT">语义回声</h2>
+        <p data-i18n="privSemanticB">开启语义回声后，模型完全在你的设备本地运行，你的笔记内容不会上传到任何地方。设备只会下载模型文件本身，且只从我们自己的域名 dockecho.com 与 models.dockecho.com 下载，不涉及任何第三方。</p>
+
+        <h2 data-i18n="privWaitlistT">候补名单邮箱</h2>
+        <p data-i18n="privWaitlistB">如果你主动填写了创始会员候补邮箱，我们会把它存在 Cloudflare KV，仅用于在开售时通知你这一件事——不发别的、不卖、不与任何人共享。你随时可以写信到 hello@dockecho.com 要求删除，我们会照做。</p>
+
+        <h2 data-i18n="privAnalyticsT">访问分析</h2>
+        <p data-i18n="privAnalyticsB">我们不放广告、不设追踪 cookie、不接入任何第三方追踪器。如果需要了解聚合的网站访问量，我们只会使用 Cloudflare Web Analytics——它不设 cookie、不采集任何个人身份信息、只在服务端做聚合统计，无需同意弹窗。</p>
+
+        <h2 data-i18n="privNoTrackT">没有的东西</h2>
+        <p data-i18n="privNoTrackB">没有账号，没有密码，没有广告，没有第三方追踪器，没有把你的数据卖给谁。产品要长期属于用户，先从不碰你的数据开始。</p>
+
+        <h2 data-i18n="privContactT">联系我们</h2>
+        <p data-i18n="privContactB">关于隐私的任何问题，或要求删除你的候补邮箱，写信到 hello@dockecho.com。这份政策若有变化，我们会更新本页并调整上方的生效日期。</p>
+      </section>
+    </main>
+
+    <footer class="land-footer">
+      <p data-i18n="landFooterPrivacy">无遥测。除非你明确要求，你的笔记永远不会离开你的设备。</p>
+      <p>
+        <a href="./privacy.html" data-i18n="landNavPrivacy">隐私政策</a> ·
+        <a href="https://github.com/zq8345/DockEcho" rel="noopener">GitHub</a> ·
+        <span>© 2026 DockEcho</span>
+      </p>
+    </footer>
+
+    <script src="./assets/i18n.js"></script>
+    <script src="./assets/page-i18n.js"></script>
+  </body>
+</html>

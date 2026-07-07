@@ -649,3 +649,28 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- privacy policy page ---------- */
+.land-section.priv {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.land-section.priv .clog-title,
+.land-section.priv .clog-intro {
+  text-align: left;
+}
+.priv-eff {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: var(--t-sm);
+}
+.land-section.priv h2 {
+  margin: 32px 0 8px;
+  font-size: var(--t-xl);
+  font-weight: 600;
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+.land-section.priv h2 + p {
+  margin: 0;
+}

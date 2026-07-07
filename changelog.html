@@ -73,31 +73,14 @@
 
     <footer class="land-footer">
       <p data-i18n="landFooterPrivacy">无遥测。除非你明确要求，你的笔记永远不会离开你的设备。</p>
-      <p><a href="https://github.com/zq8345/DockEcho" rel="noopener">GitHub</a> · <span>© 2026 DockEcho</span></p>
+      <p>
+        <a href="./privacy.html" data-i18n="landNavPrivacy">隐私政策</a> ·
+        <a href="https://github.com/zq8345/DockEcho" rel="noopener">GitHub</a> ·
+        <span>© 2026 DockEcho</span>
+      </p>
     </footer>
 
     <script src="./assets/i18n.js"></script>
-    <script>
-      (function () {
-        var KEY = "dockecho.landing.lang";
-        function pick() {
-          var stored = localStorage.getItem(KEY);
-          if (I18N[stored]) return stored;
-          return detectLang();
-        }
-        function apply() {
-          applyStaticI18n();
-          document.querySelector("#landLang").textContent = t("switchTo");
-        }
-        setI18nLang(pick());
-        document.querySelector("#landLang").addEventListener("click", function () {
-          var next = currentLang() === "zh" ? "en" : "zh";
-          setI18nLang(next);
-          localStorage.setItem(KEY, next);
-          apply();
-        });
-        apply();
-      })();
-    </script>
+    <script src="./assets/page-i18n.js"></script>
   </body>
 </html>
