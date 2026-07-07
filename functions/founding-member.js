@@ -24,10 +24,17 @@ export async function onRequestPost({ request, env }) {
   // Graceful degradation when KV is not yet bound: 503, not 500, and diagnosable.
   if (!env.WAITLIST) return Response.json({ ok: false, error: "kv_unbound" }, { status: 503 });
   const ts = new Date().toISOString();
-  const key = `wl:${ts}:${email.toLowerCase()}`;
-  await env.WAITLIST.put(key, JSON.stringify({
-    email, lang: lang || "unknown", ts,
-    ref: request.headers.get("referer") || "",
-  }));
+  // Idempotent per email: the key is the address itself (no timestamp), so the
+  // same person re-submitting overwrites their own entry instead of piling up —
+  // one address can't flood the limited founding-member seats.
+  const key = `wl:${email.toLowerCase()}`;
+  try {
+    // Store only what we need to notify at launch: email, language, timestamp.
+    // No referer / no PII-adjacent data — trust by architecture, store the least.
+    await env.WAITLIST.put(key, JSON.stringify({ email, lang: lang || "unknown", ts }));
+  } catch {
+    // Degrade like kv_unbound — never surface a 500.
+    return Response.json({ ok: false, error: "kv_write_failed" }, { status: 503 });
+  }
   return Response.json({ ok: true });
 }
