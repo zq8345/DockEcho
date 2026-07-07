@@ -97,24 +97,27 @@ function vaultProbeHandle() {
   });
 }
 
-// Netlify Forms via fetch: static form is declared in HTML, we just submit it
-// inline so the visitor never leaves the page.
+// Waitlist submit → Cloudflare Pages Function (functions/founding-member.js),
+// posted inline so the visitor never leaves the page. Success is judged by the
+// JSON { ok: true } body, not just the HTTP status.
 document.querySelector("#foundingForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
   const message = document.querySelector("#formMsg");
   const body = new URLSearchParams(new FormData(form)).toString();
   try {
-    const response = await fetch("/", {
+    const response = await fetch("/founding-member", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json().catch(() => null);
+    if (!data || data.ok !== true) throw new Error(data?.error || `HTTP ${response.status}`);
     message.textContent = t("landWaitThanks");
     message.classList.remove("error");
     form.querySelector("#formEmail").value = "";
-  } catch {
+  } catch (error) {
+    console.warn("DockEcho waitlist submit failed:", error?.message || error);
     message.textContent = t("landWaitErr");
     message.classList.add("error");
   }
